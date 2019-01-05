@@ -1,10 +1,7 @@
-use conrod_core::{widget, Widget, Sizeable, color, Colorable};
-use super::{ActionOverlay, ImageViewer};
+use conrod_core::{widget, Widget, Sizeable, color, Colorable, Positionable};
 
 widget_ids!(struct Ids {
-    canvas,
-    overlay,
-    viewer
+    text,
 });
 
 pub struct State {
@@ -12,19 +9,19 @@ pub struct State {
 }
 
 #[derive(WidgetCommon)]
-pub struct App {
+pub struct ImageViewer {
     #[conrod(common_builder)] common: widget::CommonBuilder,
 }
 
-impl App {
+impl ImageViewer {
     pub fn new() -> Self {
-        App {
+        ImageViewer {
             common: widget::CommonBuilder::default(),
         }
     }
 }
 
-impl Widget for App {
+impl Widget for ImageViewer {
     type State = State;
     type Style = ();
     type Event = ();
@@ -45,20 +42,13 @@ impl Widget for App {
             ..
         } = args;
 
-        widget::Canvas::new()
+        widget::Text::new("Image Viewer")
             .parent(id)
-            .color(color::DARK_CHARCOAL)
-            .wh_of(id)
-            .set(state.ids.canvas, ui);
-
-        ImageViewer::new()
-            .parent(id)
-            .wh_of(id)
-            .set(state.ids.viewer, ui);
-
-        ActionOverlay::new()
-            .parent(id)
-            .wh_of(id)
-            .set(state.ids.overlay, ui);
+            .color(color::WHITE)
+            .w_of(id).h(50.0)
+            .center_justify()
+            .middle()
+            .font_size(30)
+            .set(state.ids.text, ui);
     }
 }

@@ -10,18 +10,17 @@ const INITIAL_WINDOW_WIDTH: u32 = 800;
 const INITIAL_WINDOW_HEIGHT: u32 = 500;
 
 widget_ids!(struct Ids {
-    app
+    app,
 });
 
 pub fn run() {
     let mut events_loop = glium::glutin::EventsLoop::new();
     let window = glium::glutin::WindowBuilder::new()
         .with_title("Aspect")
-        .with_dimensions((INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT).into())
-        .with_maximized(true);
+        .with_dimensions((INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT).into());
     let context = glium::glutin::ContextBuilder::new()
         .with_vsync(true)
-        .with_double_buffer(Some(true));
+        .with_multisampling(4);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     let display = GliumDisplayWinitWrapper(display);
 
@@ -31,7 +30,7 @@ pub fn run() {
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
     let image_map = conrod_core::image::Map::<glium::texture::SrgbTexture2d>::new();
 
-    let app_id = Ids::new(ui.widget_id_generator()).app;
+    let ids = Ids::new(ui.widget_id_generator());
 
     let mut event_loop = EventLoop::new();
     'main: loop {
@@ -51,7 +50,13 @@ pub fn run() {
         }
 
         {
-            App::new().set(app_id, &mut ui.set_widgets());
+            use conrod_core::{Positionable, Sizeable};
+            let ui = &mut ui.set_widgets();
+            App::new()
+                .parent(ui.window)
+                .wh_of(ui.window)
+                .top_left()
+                .set(ids.app, ui);
         }
 
         if let Some(primitives) = ui.draw_if_changed() {
