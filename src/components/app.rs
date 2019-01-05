@@ -1,4 +1,4 @@
-use conrod_core::{widget, Widget, Sizeable, color, Colorable};
+use conrod_core::{widget, Widget, Sizeable, Colorable};
 use super::{ActionOverlay, ImageViewer};
 
 widget_ids!(struct Ids {
@@ -47,7 +47,7 @@ impl Widget for App {
 
         widget::Canvas::new()
             .parent(id)
-            .color(color::DARK_CHARCOAL)
+            .color(ui.theme.background_color)
             .wh_of(id)
             .set(state.ids.canvas, ui);
 

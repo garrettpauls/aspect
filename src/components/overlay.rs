@@ -1,4 +1,4 @@
-use conrod_core::{widget, Widget, Sizeable, color, Colorable, Positionable};
+use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 
 widget_ids!(struct Ids {
     text,
@@ -44,11 +44,11 @@ impl Widget for ActionOverlay {
 
         widget::Text::new("Action Overlay")
             .parent(id)
-            .color(color::WHITE)
-            .w_of(id).h(50.0)
+            .color(ui.theme.label_color)
+            .w_of(id).h(ui.theme.font_size_large as f64)
             .center_justify()
             .mid_top_with_margin(30.0)
-            .font_size(30)
+            .font_size(ui.theme.font_size_large)
             .set(state.ids.text, ui);
     }
 }

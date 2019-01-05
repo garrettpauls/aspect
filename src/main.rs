@@ -8,6 +8,7 @@ extern crate ttf_noto_sans;
 
 mod components;
 mod support;
+mod theme;
 mod window;
 
 fn main() {

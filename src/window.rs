@@ -26,6 +26,7 @@ pub fn run() {
 
     let mut ui = conrod_core::UiBuilder::new([INITIAL_WINDOW_WIDTH as f64, INITIAL_WINDOW_HEIGHT as f64]).build();
     ui.fonts.insert(conrod_core::text::FontCollection::from_bytes(ttf_noto_sans::REGULAR).unwrap().into_font().unwrap());
+    ui.theme = super::theme::default_theme();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
     let image_map = conrod_core::image::Map::<glium::texture::SrgbTexture2d>::new();
