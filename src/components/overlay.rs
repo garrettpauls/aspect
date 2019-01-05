@@ -55,7 +55,6 @@ impl Widget for ActionOverlay {
             .top_right()
             .w_h(48.0, 48.0)
             .label(">>")
-            .label_font_size(ui.theme.font_size_large)
             .set(state.ids.next, ui) {
             events.push(Action::ImageNext);
         }
@@ -66,7 +65,6 @@ impl Widget for ActionOverlay {
             .align_top_of(state.ids.next)
             .w_h(48.0, 48.0)
             .label("<<")
-            .label_font_size(ui.theme.font_size_large)
             .set(state.ids.prev, ui) {
             events.push(Action::ImagePrev);
         }
