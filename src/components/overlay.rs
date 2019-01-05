@@ -1,8 +1,15 @@
-use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
+use conrod_core::{widget, Widget, Sizeable, Positionable, Labelable};
 
 widget_ids!(struct Ids {
-    text,
+    next,
+    prev
 });
+
+#[derive(Copy, Clone, Debug)]
+pub enum Action {
+    ImageNext,
+    ImagePrev,
+}
 
 pub struct State {
     ids: Ids,
@@ -24,7 +31,7 @@ impl ActionOverlay {
 impl Widget for ActionOverlay {
     type State = State;
     type Style = ();
-    type Event = ();
+    type Event = Vec<Action>;
 
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
         State {
@@ -41,14 +48,29 @@ impl Widget for ActionOverlay {
             id,
             ..
         } = args;
+        let mut events = Vec::new();
 
-        widget::Text::new("Action Overlay")
+        for _click in widget::Button::new()
             .parent(id)
-            .color(ui.theme.label_color)
-            .w_of(id).h(ui.theme.font_size_large as f64)
-            .center_justify()
-            .mid_top_with_margin(30.0)
-            .font_size(ui.theme.font_size_large)
-            .set(state.ids.text, ui);
+            .top_right()
+            .w_h(48.0, 48.0)
+            .label(">>")
+            .label_font_size(ui.theme.font_size_large)
+            .set(state.ids.next, ui) {
+            events.push(Action::ImageNext);
+        }
+
+        for _click in widget::Button::new()
+            .parent(id)
+            .left_from(state.ids.next, 0.0)
+            .align_top_of(state.ids.next)
+            .w_h(48.0, 48.0)
+            .label("<<")
+            .label_font_size(ui.theme.font_size_large)
+            .set(state.ids.prev, ui) {
+            events.push(Action::ImagePrev);
+        }
+
+        events
     }
 }

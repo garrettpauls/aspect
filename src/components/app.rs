@@ -56,9 +56,11 @@ impl Widget for App {
             .wh_of(id)
             .set(state.ids.viewer, ui);
 
-        ActionOverlay::new()
+        for action in ActionOverlay::new()
             .parent(id)
             .wh_of(id)
-            .set(state.ids.overlay, ui);
+            .set(state.ids.overlay, ui) {
+            log::info!("overlay action: {:?}", action);
+        }
     }
 }
