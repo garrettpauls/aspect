@@ -12,6 +12,16 @@ pub struct File {
 }
 
 impl FileList {
+    pub fn from_environment() -> Option<Self> {
+        use std::env::args;
+
+        let paths: Vec<_> = args().map(|a| PathBuf::from(a)).filter(|p| p.exists()).collect();
+        let files = paths.iter().filter_map(|p| FileList::from_file(p)).next()
+            .or(paths.iter().filter_map(|p| FileList::from_dir(p)).next());
+
+        files
+    }
+
     pub fn from_file(path: &Path) -> Option<Self> {
         if !is_image_file(path) {
             return None;
@@ -50,11 +60,13 @@ impl FileList {
     }
 }
 
+pub static SUPPORTED_FILE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "bmp"];
+
 fn is_image_file(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
 
     let ext = path.extension().map(|x| x.to_str()).unwrap_or(None).unwrap_or("").to_lowercase();
-    ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp"
+    SUPPORTED_FILE_EXTENSIONS.contains(&&ext[..])
 }

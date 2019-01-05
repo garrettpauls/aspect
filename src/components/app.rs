@@ -1,17 +1,20 @@
 use super::{ActionOverlay, ImageViewer};
-use conrod_core::{widget, Widget, Sizeable, Colorable};
+use super::super::data::FileList;
+use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::{Event, Ui, Release, Button};
 use conrod_core::input::Key;
 
 widget_ids!(struct Ids {
-    canvas,
+    background,
     overlay,
-    viewer
+    viewer,
+    file_nav,
 });
 
 pub struct State {
     ids: Ids,
     is_overlay_visible: bool,
+    files: Option<FileList>,
 }
 
 #[derive(WidgetCommon)]
@@ -36,6 +39,7 @@ impl Widget for App {
         State {
             ids: Ids::new(id_gen),
             is_overlay_visible: false,
+            files: FileList::from_environment(),
         }
     }
 
@@ -49,26 +53,37 @@ impl Widget for App {
             ..
         } = args;
 
-        self.process_events(state, ui);
-
         widget::Canvas::new()
             .parent(id)
             .color(ui.theme.background_color)
             .wh_of(id)
-            .set(state.ids.canvas, ui);
+            .set(state.ids.background, ui);
 
-        ImageViewer::new()
-            .parent(id)
-            .wh_of(id)
-            .set(state.ids.viewer, ui);
+        if let Some(_files) = &state.files {
+            self.process_events(state, ui);
 
-        if state.is_overlay_visible {
-            for action in ActionOverlay::new()
+            ImageViewer::new()
                 .parent(id)
                 .wh_of(id)
-                .set(state.ids.overlay, ui) {
-                log::info!("overlay action: {:?}", action);
+                .set(state.ids.viewer, ui);
+
+            if state.is_overlay_visible {
+                for action in ActionOverlay::new()
+                    .parent(id)
+                    .wh_of(id)
+                    .set(state.ids.overlay, ui) {
+                    log::info!("overlay action: {:?}", action);
+                }
             }
+        } else {
+            widget::Text::new("Rerun the program with an argument pointing to a directory or file.\nPicking a file from here may be supported in the future.")
+                .parent(id)
+                .padded_wh_of(id, 24.0)
+                .top_left()
+                .center_justify()
+                .wrap_by_word()
+                .font_size(ui.theme.font_size_large)
+                .set(state.ids.file_nav, ui);
         }
     }
 }
