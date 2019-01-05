@@ -9,13 +9,28 @@ extern crate log;
 extern crate env_logger;
 
 mod components;
+mod data;
 mod support;
 mod theme;
 mod window;
 
+use std::env::args;
+use std::path::PathBuf;
+use self::data::file_list::FileList;
+
 fn run() {
     env_logger::init();
-    window::run();
+
+    let paths: Vec<_> = args().map(|a| PathBuf::from(a)).filter(|p| p.exists()).collect();
+    let files = paths.iter().filter_map(|p| FileList::from_file(p)).next()
+        .or(paths.iter().filter_map(|p| FileList::from_dir(p)).next());
+
+    if let Some(files) = files {
+        log::trace!("files: {:#?}", files);
+        window::run();
+    } else {
+        log::error!("No image file or directory passed as an argument.");
+    }
 }
 
 fn main() {
