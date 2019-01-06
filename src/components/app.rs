@@ -1,8 +1,9 @@
 use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
-use conrod_core::event::{Event, Ui, Release, Button};
-use conrod_core::input::Key;
+use conrod_core::event::Button;
+use conrod_core::input::{Key, MouseButton};
 
 use super::{ActionOverlay, ImageViewer};
+use super::overlay::Action;
 use crate::data::FileList;
 
 widget_ids!(struct Ids {
@@ -55,12 +56,10 @@ impl Widget for App {
         } = args;
 
         widget::Canvas::new()
-            .parent(id)
+            .parent(id).graphics_for(id)
             .color(ui.theme.background_color)
             .wh_of(id)
             .set(state.ids.background, ui);
-
-        self.process_events(state, ui);
 
         if let Some(files) = &state.files {
             ImageViewer::new()
@@ -68,50 +67,42 @@ impl Widget for App {
                 .wh_of(id)
                 .set(state.ids.viewer, ui);
 
-            if state.is_overlay_visible {
-                for action in ActionOverlay::new(&files)
+            let mut actions = if state.is_overlay_visible {
+                ActionOverlay::new(&files)
                     .parent(id)
                     .wh_of(id)
-                    .set(state.ids.overlay, ui) {
-                    use super::overlay::Action;
-                    log::info!("overlay action: {:?}", action);
+                    .set(state.ids.overlay, ui)
+            } else { Vec::new() };
 
-                    match action {
-                        Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
-                        Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
-                        Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
-                        Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
-                    }
+            for release in ui.widget_input(id).releases() {
+                match release.button {
+                    Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) =>
+                        state.update(|s| s.is_overlay_visible = !s.is_overlay_visible),
+                    Button::Mouse(MouseButton::Button6, _) => actions.push(Action::ImageNext),
+                    Button::Mouse(MouseButton::X2, _) => actions.push(Action::ImagePrev),
+                    _ => (),
+                }
+            }
+
+            for action in actions {
+                log::info!("overlay action: {:?}", action);
+
+                match action {
+                    Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
+                    Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
+                    Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
+                    Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
                 }
             }
         } else {
             widget::Text::new("Rerun the program with an argument pointing to a directory or file.\nPicking a file from here may be supported in the future.")
-                .parent(id)
+                .parent(id).graphics_for(id)
                 .padded_wh_of(id, 24.0)
                 .top_left()
                 .center_justify()
                 .wrap_by_word()
                 .font_size(ui.theme.font_size_large)
                 .set(state.ids.file_nav, ui);
-        }
-    }
-}
-
-impl App {
-    fn process_events(&self, state: &mut widget::State<State>, ui: &mut conrod_core::UiCell) {
-        for event in ui.global_input().events().filter_map(|e| match e {
-            Event::Ui(ui) => Some(ui),
-            _ => None
-        }) {
-            match event {
-                Ui::Release(_, Release { button, .. }) => match button {
-                    Button::Keyboard(Key::Space) => {
-                        state.update(|s| s.is_overlay_visible = !s.is_overlay_visible);
-                    }
-                    _ => ()
-                },
-                _ => ()
-            }
         }
     }
 }
