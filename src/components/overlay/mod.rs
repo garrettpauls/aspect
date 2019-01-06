@@ -1,13 +1,14 @@
 use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
 
-use crate::data::FileList;
+use crate::data::{FileList, FileSort, FILE_SORT_METHODS};
 
 mod list_item;
 
 widget_ids!(struct Ids {
     next,
     prev,
-    file_list
+    sort,
+    file_list,
 });
 
 #[derive(Copy, Clone, Debug)]
@@ -15,6 +16,7 @@ pub enum Action {
     ImageNext,
     ImagePrev,
     Select(usize),
+    Sort(FileSort),
 }
 
 pub struct State {
@@ -105,6 +107,20 @@ impl<'a> Widget for ActionOverlay<'a> {
             .label("<<")
             .set(state.ids.prev, ui) {
             actions.push(Action::ImagePrev);
+        }
+
+        let idx = FILE_SORT_METHODS.iter().position(|&x| x == *self.files.current_sort());
+        if let Some(new_idx) = widget::DropDownList::new(FILE_SORT_METHODS, idx)
+            .parent(id)
+            .left_from(state.ids.prev, 0.0)
+            .align_top_of(state.ids.next)
+            .w_h(192.0, 48.0)
+            .set(state.ids.sort, ui) {
+            if Some(new_idx) != idx {
+                if let Some(method) = FILE_SORT_METHODS.get(new_idx) {
+                    actions.push(Action::Sort(*method));
+                }
+            }
         }
 
         actions

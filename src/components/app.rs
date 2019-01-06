@@ -80,6 +80,7 @@ impl Widget for App {
                         Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
                         Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
                         Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
+                        Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
                     }
                 }
             }

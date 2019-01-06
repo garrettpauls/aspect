@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fmt;
+use std::convert::AsRef;
 use std::cmp::Ordering;
 
 use super::file::File;
@@ -17,6 +18,8 @@ pub enum FileSort {
     LastModified,
 }
 
+pub static FILE_SORT_METHODS: &[FileSort] = &[FileSort::Name, FileSort::LastModified];
+
 impl FileSort {
     pub fn compare(&self, a: &File, b: &File) -> Ordering {
         match self {
@@ -28,10 +31,16 @@ impl FileSort {
 
 impl fmt::Display for FileSort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(match self {
+        f.write_str(self.as_ref())
+    }
+}
+
+impl AsRef<str> for FileSort {
+    fn as_ref(&self) -> &str {
+        match self {
             FileSort::Name => "Name",
             FileSort::LastModified => "Last Modified",
-        })
+        }
     }
 }
 
@@ -90,6 +99,8 @@ impl FileList {
 
     pub fn current_index(&self) -> usize { self.current_index }
 
+    pub fn current_sort(&self) -> &FileSort { &self.current_sort }
+
     pub fn set_current(&mut self, current: usize) {
         self.current_index = current % self.files.len();
     }
@@ -106,23 +117,30 @@ impl FileList {
 
     pub fn sort_by(&mut self, property: FileSort) {
         if self.current_sort == property {
+            log::info!("Sort files by {} skipped due to already sorted", property);
             return;
         }
 
+        log::info!("Sort files by {}", property);
+
+        self.current_sort = property;
         let selected = self
             .get_file(self.current_index)
             .map(|f| f.path.clone());
 
         { self.files.sort_by(|a, b| property.compare(a, b)); }
 
-        self.set_current(if let Some(selected) = selected {
+        let new_idx = if let Some(selected) = selected {
             self.files.iter().enumerate()
                 .find(|(_, i)| i.path == selected)
                 .map(|(i, _)| i)
                 .unwrap_or(0)
         } else {
             0
-        })
+        };
+
+        log::info!("Restoring index to {} after sort", new_idx);
+        self.set_current(new_idx);
     }
 }
 
