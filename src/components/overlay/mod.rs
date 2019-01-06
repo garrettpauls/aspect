@@ -1,5 +1,8 @@
-use conrod_core::{widget, Widget, Sizeable, Positionable, Labelable, Colorable};
+use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
+
 use super::super::data::FileList;
+
+mod list_item;
 
 widget_ids!(struct Ids {
     next,
@@ -59,7 +62,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             widget::ListSelect::single(self.files.files.len())
                 .parent(id)
                 .flow_down()
-                .item_size(30.0)
+                .item_size(50.0)
                 .scrollbar_next_to()
                 .w(300.0).h_of(id)
                 .top_right()
@@ -70,22 +73,14 @@ impl<'a> Widget for ActionOverlay<'a> {
             match event {
                 Event::Item(item) => {
                     if let Some(file) = self.files.get_file(item.i) {
-                        // TODO: create proper widget for showing files
-                        use std::ffi::OsStr;
-                        let name = file.path.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy();
-                        let size = file.size();
-                        let date = file.last_modified();
-                        let label = format!("{}\t{:?}\t{}", name, date, size);
-                        let item_widget = widget::Text::new(&label)
-                            .no_line_wrap();
-                        let item_widget = if self.files.current_index() == item.i {
-                            item_widget.color(conrod_core::color::RED)
-                        } else { item_widget };
-                        item.set(item_widget, ui);
+                        let is_selected = self.files.current_index() == item.i;
+                        let style = if is_selected { Some(build_selected_style()) } else { None };
+                        let widget = list_item::ListItem::new(file).with_style(style);
+                        item.set(widget, ui);
                     }
                 }
                 Event::Selection(i) => actions.push(Action::Select(i)),
-                event => log::info!("unhandled file list event: {:?}", event),
+                _ => (),
             }
         }
         if let Some(s) = scrollbar {
@@ -114,4 +109,11 @@ impl<'a> Widget for ActionOverlay<'a> {
 
         actions
     }
+}
+
+fn build_selected_style() -> list_item::Style {
+    let mut style = list_item::Style::default();
+    style.label_color = Some(color::DARK_RED);
+    style.color = Some(color::CHARCOAL);
+    style
 }

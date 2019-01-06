@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+
+use super::file::File;
 
 #[derive(Debug)]
 pub struct FileList {
@@ -7,10 +8,6 @@ pub struct FileList {
     current_index: usize,
 }
 
-#[derive(Debug)]
-pub struct File {
-    pub path: PathBuf,
-}
 
 impl FileList {
     pub fn from_environment() -> Option<Self> {
@@ -74,18 +71,6 @@ impl FileList {
 
     pub fn get_file(&self, index: usize) -> Option<&File> {
         self.files.get(index)
-    }
-}
-
-impl File {
-    pub fn size(&self) -> u64 {
-        self.path.metadata().map(|m| m.len()).unwrap_or(0)
-    }
-
-    pub fn last_modified(&self) -> SystemTime {
-        self.path.metadata()
-            .map(|m| m.modified().unwrap_or(SystemTime::UNIX_EPOCH))
-            .unwrap_or(SystemTime::UNIX_EPOCH)
     }
 }
 

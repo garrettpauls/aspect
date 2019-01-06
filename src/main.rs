@@ -7,6 +7,7 @@ extern crate conrod_winit;
 extern crate ttf_noto_sans;
 extern crate log;
 extern crate env_logger;
+extern crate chrono;
 
 mod components;
 mod data;
