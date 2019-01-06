@@ -2,8 +2,8 @@ use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::Button;
 use conrod_core::input::{Key, MouseButton};
 
+use super::Action;
 use super::{ActionOverlay, ImageViewer};
-use super::overlay::Action;
 use crate::data::FileList;
 
 widget_ids!(struct Ids {
