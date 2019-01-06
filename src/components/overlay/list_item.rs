@@ -8,7 +8,7 @@ widget_ids!(struct Ids {
     background,
     name,
     date,
-    size
+    size,
 });
 
 pub struct State {
@@ -75,7 +75,7 @@ impl<'a> Widget for ListItem<'a> {
         } = args;
 
         widget::Canvas::new()
-            .parent(id)
+            .parent(id).graphics_for(id)
             .wh_of(id)
             .top_left_of(id)
             .color(style.color(&ui.theme))
@@ -86,7 +86,7 @@ impl<'a> Widget for ListItem<'a> {
         let h = self.get_h(ui).unwrap_or(50.0) / 2.5;
         let name = self.file.path.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy();
         widget::Text::new(&name)
-            .parent(id)
+            .parent(id).graphics_for(id)
             .w_of(id).h(h)
             .top_left_of(state.ids.background)
             .left_justify()
@@ -96,7 +96,7 @@ impl<'a> Widget for ListItem<'a> {
         let modified: DateTime<Local> = DateTime::from(self.file.last_modified());
         let modified = modified.format("    %F").to_string();
         widget::Text::new(&modified)
-            .parent(id)
+            .parent(id).graphics_for(id)
             .w_of(id).h(h)
             .bottom_left_of(state.ids.background)
             .align_left_of(state.ids.name)
@@ -107,7 +107,7 @@ impl<'a> Widget for ListItem<'a> {
         let size = self.file.size();
         let size = format!("{}    ", size);
         widget::Text::new(&size)
-            .parent(id)
+            .parent(id).graphics_for(id)
             .w_of(id).h(h)
             .align_left_of(state.ids.date)
             .align_top_of(state.ids.date)
