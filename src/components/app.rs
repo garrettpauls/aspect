@@ -2,8 +2,8 @@ use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::Button;
 use conrod_core::input::{Key, MouseButton};
 
+use super::Action;
 use super::{ActionOverlay, ImageViewer};
-use super::overlay::Action;
 use crate::data::FileList;
 
 widget_ids!(struct Ids {
@@ -61,18 +61,20 @@ impl Widget for App {
             .wh_of(id)
             .set(state.ids.background, ui);
 
+        let mut actions = Vec::new();
+
         if let Some(files) = &state.files {
             ImageViewer::new()
                 .parent(id)
                 .wh_of(id)
                 .set(state.ids.viewer, ui);
 
-            let mut actions = if state.is_overlay_visible {
-                ActionOverlay::new(&files)
+            if state.is_overlay_visible {
+                actions.append(&mut ActionOverlay::new(&files)
                     .parent(id)
                     .wh_of(id)
-                    .set(state.ids.overlay, ui)
-            } else { Vec::new() };
+                    .set(state.ids.overlay, ui));
+            }
 
             for release in ui.widget_input(id).releases() {
                 match release.button {
@@ -81,17 +83,6 @@ impl Widget for App {
                     Button::Mouse(MouseButton::Button6, _) => actions.push(Action::ImageNext),
                     Button::Mouse(MouseButton::X2, _) => actions.push(Action::ImagePrev),
                     _ => (),
-                }
-            }
-
-            for action in actions {
-                log::info!("overlay action: {:?}", action);
-
-                match action {
-                    Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
-                    Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
-                    Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
-                    Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
                 }
             }
         } else {
@@ -103,6 +94,17 @@ impl Widget for App {
                 .wrap_by_word()
                 .font_size(ui.theme.font_size_large)
                 .set(state.ids.file_nav, ui);
+        }
+
+        for action in actions {
+            log::info!("overlay action: {:?}", action);
+
+            match action {
+                Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
+                Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
+                Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
+                Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
+            }
         }
     }
 }

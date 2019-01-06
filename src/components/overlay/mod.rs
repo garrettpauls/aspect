@@ -1,6 +1,7 @@
 use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
 
-use crate::data::{FileList, FileSort, FILE_SORT_METHODS};
+use crate::components::Action;
+use crate::data::{FileList, FILE_SORT_METHODS};
 
 mod list_item;
 
@@ -10,14 +11,6 @@ widget_ids!(struct Ids {
     sort,
     file_list,
 });
-
-#[derive(Copy, Clone, Debug)]
-pub enum Action {
-    ImageNext,
-    ImagePrev,
-    Select(usize),
-    Sort(FileSort),
-}
 
 pub struct State {
     ids: Ids,
