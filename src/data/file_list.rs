@@ -1,4 +1,6 @@
 use std::path::{Path, PathBuf};
+use std::fmt;
+use std::cmp::Ordering;
 
 use super::file::File;
 
@@ -6,8 +8,32 @@ use super::file::File;
 pub struct FileList {
     pub files: Vec<File>,
     current_index: usize,
+    current_sort: FileSort,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum FileSort {
+    Name,
+    LastModified,
+}
+
+impl FileSort {
+    pub fn compare(&self, a: &File, b: &File) -> Ordering {
+        match self {
+            FileSort::Name => a.path.file_name().cmp(&b.path.file_name()),
+            FileSort::LastModified => a.last_modified().cmp(&b.last_modified()),
+        }
+    }
+}
+
+impl fmt::Display for FileSort {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match self {
+            FileSort::Name => "Name",
+            FileSort::LastModified => "Last Modified",
+        })
+    }
+}
 
 impl FileList {
     pub fn from_environment() -> Option<Self> {
@@ -51,10 +77,15 @@ impl FileList {
             });
         }
 
-        Some(FileList {
+        let mut list = FileList {
             files: file_names,
             current_index: 0,
-        })
+            current_sort: FileSort::LastModified,
+        };
+
+        list.sort_by(FileSort::Name);
+
+        Some(list)
     }
 
     pub fn current_index(&self) -> usize { self.current_index }
@@ -71,6 +102,27 @@ impl FileList {
 
     pub fn get_file(&self, index: usize) -> Option<&File> {
         self.files.get(index)
+    }
+
+    pub fn sort_by(&mut self, property: FileSort) {
+        if self.current_sort == property {
+            return;
+        }
+
+        let selected = self
+            .get_file(self.current_index)
+            .map(|f| f.path.clone());
+
+        { self.files.sort_by(|a, b| property.compare(a, b)); }
+
+        self.set_current(if let Some(selected) = selected {
+            self.files.iter().enumerate()
+                .find(|(_, i)| i.path == selected)
+                .map(|(i, _)| i)
+                .unwrap_or(0)
+        } else {
+            0
+        })
     }
 }
 
