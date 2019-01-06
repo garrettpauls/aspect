@@ -89,6 +89,8 @@ impl FileList {
         Some(list)
     }
 
+    pub fn current(&self) -> Option<&File> { self.files.get(self.current_index) }
+
     pub fn current_index(&self) -> usize { self.current_index }
 
     pub fn current_sort(&self) -> &FileSort { &self.current_sort }

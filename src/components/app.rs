@@ -1,6 +1,8 @@
 use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::Button;
 use conrod_core::input::{Key, MouseButton};
+use conrod_core::image::Id;
+use std::path::PathBuf;
 
 use super::Action;
 use super::{ActionOverlay, ImageViewer};
@@ -17,17 +19,20 @@ pub struct State {
     ids: Ids,
     is_overlay_visible: bool,
     files: Option<FileList>,
+    current_file_path: Option<PathBuf>,
 }
 
 #[derive(WidgetCommon)]
 pub struct App {
     #[conrod(common_builder)] common: widget::CommonBuilder,
+    image_id: Option<Id>,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(image_id: Option<Id>) -> Self {
         App {
             common: widget::CommonBuilder::default(),
+            image_id,
         }
     }
 }
@@ -35,13 +40,14 @@ impl App {
 impl Widget for App {
     type State = State;
     type Style = ();
-    type Event = ();
+    type Event = Vec<Action>;
 
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
         State {
             ids: Ids::new(id_gen),
             is_overlay_visible: false,
             files: FileList::from_environment(),
+            current_file_path: None,
         }
     }
 
@@ -64,10 +70,12 @@ impl Widget for App {
         let mut actions = Vec::new();
 
         if let Some(files) = &state.files {
-            ImageViewer::new()
-                .parent(id)
-                .wh_of(id)
-                .set(state.ids.viewer, ui);
+            if let Some(image_id) = self.image_id {
+                ImageViewer::new(image_id)
+                    .parent(id)
+                    .wh_of(id)
+                    .set(state.ids.viewer, ui);
+            }
 
             if state.is_overlay_visible {
                 actions.append(&mut ActionOverlay::new(&files)
@@ -96,6 +104,8 @@ impl Widget for App {
                 .set(state.ids.file_nav, ui);
         }
 
+        let mut results = Vec::new();
+
         for action in actions {
             log::info!("overlay action: {:?}", action);
 
@@ -104,7 +114,22 @@ impl Widget for App {
                 Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
                 Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
                 Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
+                unhandled => results.push(unhandled),
             }
         }
+
+        let new_file = if let Some(f) = &state.files {
+            f.current().map(|f| f.path.clone())
+        } else { None };
+        if state.current_file_path != new_file {
+            if let Some(file) = &new_file {
+                results.push(Action::LoadImage(file.clone()));
+            }
+
+            state.update(|s| s.current_file_path = new_file);
+        }
+
+
+        results
     }
 }

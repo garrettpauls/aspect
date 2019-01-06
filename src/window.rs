@@ -3,7 +3,7 @@ use glium::Surface;
 
 use ttf_noto_sans;
 
-use crate::components::App;
+use crate::components::{Action, App, ImageManager};
 use crate::support::{EventLoop, GliumDisplayWinitWrapper};
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
@@ -29,7 +29,7 @@ pub fn run() {
     ui.theme = super::theme::default_theme();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
-    let image_map = conrod_core::image::Map::<glium::texture::SrgbTexture2d>::new();
+    let mut image_manager = ImageManager::new();
 
     let ids = Ids::new(ui.widget_id_generator());
 
@@ -53,18 +53,24 @@ pub fn run() {
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            App::new()
+            for action in App::new(*image_manager.get_image_id())
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()
-                .set(ids.app, ui);
+                .set(ids.app, ui) {
+                match action {
+                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&path) { log::error!("Failed to load image {}: {}", path.display(), e) },
+                    _ => ()
+                }
+            }
         }
 
         if let Some(primitives) = ui.draw_if_changed() {
-            renderer.fill(&display.0, primitives, &image_map);
+            let image_map = image_manager.get_map();
+            renderer.fill(&display.0, primitives, image_map);
             let mut target = display.0.draw();
             target.clear_color(0.0, 0.0, 0.0, 1.0);
-            renderer.draw(&display.0, &mut target, &image_map).unwrap();
+            renderer.draw(&display.0, &mut target, image_map).unwrap();
             target.finish().unwrap();
         }
     }

@@ -1,7 +1,8 @@
-use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
+use conrod_core::{widget, Widget, Sizeable, Positionable};
+use conrod_core::image::Id;
 
 widget_ids!(struct Ids {
-    text,
+    image,
 });
 
 pub struct State {
@@ -11,12 +12,14 @@ pub struct State {
 #[derive(WidgetCommon)]
 pub struct ImageViewer {
     #[conrod(common_builder)] common: widget::CommonBuilder,
+    image_id: Id,
 }
 
 impl ImageViewer {
-    pub fn new() -> Self {
+    pub fn new(image_id: Id) -> Self {
         ImageViewer {
             common: widget::CommonBuilder::default(),
+            image_id,
         }
     }
 }
@@ -42,13 +45,10 @@ impl Widget for ImageViewer {
             ..
         } = args;
 
-        widget::Text::new("Image Viewer")
-            .parent(id)
-            .color(ui.theme.label_color)
-            .w_of(id).h(ui.theme.font_size_large as f64)
-            .center_justify()
-            .middle()
-            .font_size(ui.theme.font_size_large)
-            .set(state.ids.text, ui);
+        widget::Image::new(self.image_id)
+            .parent(id).graphics_for(id)
+            .wh_of(id)
+            .top_left()
+            .set(state.ids.image, ui);
     }
 }
