@@ -1,14 +1,15 @@
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 #[derive(Debug)]
 pub struct FileList {
-    files: Vec<File>,
+    pub files: Vec<File>,
     current_index: usize,
 }
 
 #[derive(Debug)]
 pub struct File {
-    path: PathBuf
+    pub path: PathBuf,
 }
 
 impl FileList {
@@ -57,6 +58,34 @@ impl FileList {
             files: file_names,
             current_index: 0,
         })
+    }
+
+    pub fn current_index(&self) -> usize { self.current_index }
+
+    pub fn set_current(&mut self, current: usize) {
+        self.current_index = current % self.files.len();
+    }
+
+    pub fn increment_current(&mut self, amount: i64) {
+        let i = (self.current_index as i64 + amount) % self.files.len() as i64;
+        let i = if i < 0 { self.files.len() as i64 + i } else { i } as usize;
+        self.current_index = i;
+    }
+
+    pub fn get_file(&self, index: usize) -> Option<&File> {
+        self.files.get(index)
+    }
+}
+
+impl File {
+    pub fn size(&self) -> u64 {
+        self.path.metadata().map(|m| m.len()).unwrap_or(0)
+    }
+
+    pub fn last_modified(&self) -> SystemTime {
+        self.path.metadata()
+            .map(|m| m.modified().unwrap_or(SystemTime::UNIX_EPOCH))
+            .unwrap_or(SystemTime::UNIX_EPOCH)
     }
 }
 

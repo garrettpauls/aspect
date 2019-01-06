@@ -59,20 +59,27 @@ impl Widget for App {
             .wh_of(id)
             .set(state.ids.background, ui);
 
-        if let Some(_files) = &state.files {
-            self.process_events(state, ui);
+        self.process_events(state, ui);
 
+        if let Some(files) = &state.files {
             ImageViewer::new()
                 .parent(id)
                 .wh_of(id)
                 .set(state.ids.viewer, ui);
 
             if state.is_overlay_visible {
-                for action in ActionOverlay::new()
+                for action in ActionOverlay::new(&files)
                     .parent(id)
                     .wh_of(id)
                     .set(state.ids.overlay, ui) {
+                    use super::overlay::Action;
                     log::info!("overlay action: {:?}", action);
+
+                    match action {
+                        Action::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
+                        Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
+                        Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
+                    }
                 }
             }
         } else {
