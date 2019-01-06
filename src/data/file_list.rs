@@ -1,7 +1,6 @@
+use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 use std::fmt;
-use std::convert::AsRef;
-use std::cmp::Ordering;
 
 use super::file::File;
 
@@ -16,18 +15,10 @@ pub struct FileList {
 pub enum FileSort {
     Name,
     LastModified,
+    Random,
 }
 
-pub static FILE_SORT_METHODS: &[FileSort] = &[FileSort::Name, FileSort::LastModified];
-
-impl FileSort {
-    pub fn compare(&self, a: &File, b: &File) -> Ordering {
-        match self {
-            FileSort::Name => a.path.file_name().cmp(&b.path.file_name()),
-            FileSort::LastModified => a.last_modified().cmp(&b.last_modified()),
-        }
-    }
-}
+pub static FILE_SORT_METHODS: &[FileSort] = &[FileSort::Name, FileSort::LastModified, FileSort::Random];
 
 impl fmt::Display for FileSort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -40,6 +31,7 @@ impl AsRef<str> for FileSort {
         match self {
             FileSort::Name => "Name",
             FileSort::LastModified => "Last Modified",
+            FileSort::Random => "Random",
         }
     }
 }
@@ -82,7 +74,7 @@ impl FileList {
             }
 
             file_names.push(File {
-                path: entry.path()
+                path: entry.path(),
             });
         }
 
@@ -128,7 +120,14 @@ impl FileList {
             .get_file(self.current_index)
             .map(|f| f.path.clone());
 
-        { self.files.sort_by(|a, b| property.compare(a, b)); }
+        {
+            use rand::{thread_rng, seq::SliceRandom};
+            match property {
+                FileSort::Name => self.files.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
+                FileSort::LastModified => self.files.sort_by(|a, b| a.last_modified().cmp(&b.last_modified())),
+                FileSort::Random => self.files.shuffle(&mut thread_rng()),
+            }
+        }
 
         let new_idx = if let Some(selected) = selected {
             self.files.iter().enumerate()
