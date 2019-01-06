@@ -1,10 +1,8 @@
-use conrod_core::{widget, Widget};
-use std::ffi::OsStr;
-use crate::data::File;
-use conrod_core::position::Sizeable;
-use conrod_core::position::Positionable;
-use conrod_core::color::Colorable;
 use chrono::{DateTime, Local};
+use conrod_core::{widget, Widget, Sizeable, Positionable, Colorable};
+use std::ffi::OsStr;
+
+use crate::data::File;
 
 widget_ids!(struct Ids {
     background,

@@ -1,6 +1,6 @@
+use std::fmt;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use std::fmt;
 
 #[derive(Debug)]
 pub struct File {

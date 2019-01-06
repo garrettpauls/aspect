@@ -1,6 +1,6 @@
 use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
 
-use super::super::data::FileList;
+use crate::data::FileList;
 
 mod list_item;
 

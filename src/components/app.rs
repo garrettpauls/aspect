@@ -1,8 +1,9 @@
-use super::{ActionOverlay, ImageViewer};
-use super::super::data::FileList;
 use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::{Event, Ui, Release, Button};
 use conrod_core::input::Key;
+
+use super::{ActionOverlay, ImageViewer};
+use crate::data::FileList;
 
 widget_ids!(struct Ids {
     background,

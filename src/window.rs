@@ -1,10 +1,10 @@
-use glium::Surface;
-use super::support::{EventLoop, GliumDisplayWinitWrapper};
 use conrod_core::Widget;
+use glium::Surface;
 
 use ttf_noto_sans;
 
-use super::components::App;
+use crate::components::App;
+use crate::support::{EventLoop, GliumDisplayWinitWrapper};
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
 const INITIAL_WINDOW_HEIGHT: u32 = 500;
