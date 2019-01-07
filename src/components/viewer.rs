@@ -1,5 +1,5 @@
 use conrod_core::{widget, Widget, Sizeable, Positionable};
-use conrod_core::image::Id;
+use crate::components::ImageData;
 
 widget_ids!(struct Ids {
     image,
@@ -12,14 +12,14 @@ pub struct State {
 #[derive(WidgetCommon)]
 pub struct ImageViewer {
     #[conrod(common_builder)] common: widget::CommonBuilder,
-    image_id: Id,
+    image: ImageData,
 }
 
 impl ImageViewer {
-    pub fn new(image_id: Id) -> Self {
+    pub fn new(image: ImageData) -> Self {
         ImageViewer {
             common: widget::CommonBuilder::default(),
-            image_id,
+            image,
         }
     }
 }
@@ -45,9 +45,9 @@ impl Widget for ImageViewer {
             ..
         } = args;
 
-        widget::Image::new(self.image_id)
+        widget::Image::new(self.image.id)
             .parent(id).graphics_for(id)
-            .wh_of(id)
+            .w_h(self.image.w as f64, self.image.h as f64)
             .top_left()
             .set(state.ids.image, ui);
     }

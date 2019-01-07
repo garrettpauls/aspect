@@ -53,13 +53,13 @@ pub fn run() {
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            for action in App::new(*image_manager.get_image_id())
+            for action in App::new(image_manager.current().clone())
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()
                 .set(ids.app, ui) {
                 match action {
-                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&path) { log::error!("Failed to load image {}: {}", path.display(), e) },
+                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&display.0, &path) { log::error!("Failed to load image {}: {}", path.display(), e) },
                     _ => ()
                 }
             }

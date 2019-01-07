@@ -1,11 +1,9 @@
 use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::Button;
 use conrod_core::input::{Key, MouseButton};
-use conrod_core::image::Id;
 use std::path::PathBuf;
 
-use super::Action;
-use super::{ActionOverlay, ImageViewer};
+use super::{Action, ActionOverlay, ImageViewer, ImageData};
 use crate::data::FileList;
 
 widget_ids!(struct Ids {
@@ -25,14 +23,14 @@ pub struct State {
 #[derive(WidgetCommon)]
 pub struct App {
     #[conrod(common_builder)] common: widget::CommonBuilder,
-    image_id: Option<Id>,
+    image: Option<ImageData>,
 }
 
 impl App {
-    pub fn new(image_id: Option<Id>) -> Self {
+    pub fn new(image: Option<ImageData>) -> Self {
         App {
             common: widget::CommonBuilder::default(),
-            image_id,
+            image,
         }
     }
 }
@@ -70,9 +68,9 @@ impl Widget for App {
         let mut actions = Vec::new();
 
         if let Some(files) = &state.files {
-            if let Some(image_id) = self.image_id {
-                ImageViewer::new(image_id)
-                    .parent(id)
+            if let Some(image) = self.image {
+                ImageViewer::new(image)
+                    .parent(id).graphics_for(id)
                     .wh_of(id)
                     .set(state.ids.viewer, ui);
             }
