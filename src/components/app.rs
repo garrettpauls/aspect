@@ -82,7 +82,8 @@ impl Widget for App {
                     .set(state.ids.overlay, ui));
             }
 
-            for release in ui.widget_input(id).releases() {
+            let releases = ui.widget_input(id).releases().chain(ui.widget_input(state.ids.viewer).releases());
+            for release in releases {
                 match release.button {
                     Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) =>
                         state.update(|s| s.is_overlay_visible = !s.is_overlay_visible),
