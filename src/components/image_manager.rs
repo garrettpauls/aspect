@@ -1,6 +1,8 @@
 use conrod_core::image::{Id, Map};
 use glium::Display;
 use glium::texture::{RawImage2d, SrgbTexture2d};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
 
 #[derive(Debug, Clone)]
@@ -8,6 +10,11 @@ pub struct ImageData {
     pub id: Id,
     pub w: u32,
     pub h: u32,
+    hash: u64,
+}
+
+impl PartialEq for ImageData {
+    fn eq(&self, other: &ImageData) -> bool { self.hash == other.hash }
 }
 
 pub struct ImageManager {
@@ -58,6 +65,7 @@ impl ImageManager {
                 id: self.image_map.insert(image),
                 w,
                 h,
+                hash: hash_path(&path),
             });
         }
 
@@ -77,4 +85,10 @@ fn load_image_from_file(display: &Display, path: &Path) -> Result<(SrgbTexture2d
     SrgbTexture2d::new(display, raw_image)
         .map(|t| (t, dimensions))
         .map_err(|e| format!("{}", e))
+}
+
+fn hash_path(path: &Path) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    hasher.finish()
 }

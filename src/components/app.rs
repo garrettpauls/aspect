@@ -70,7 +70,7 @@ impl Widget for App {
         if let Some(files) = &state.files {
             if let Some(image) = self.image {
                 ImageViewer::new(image)
-                    .parent(id).graphics_for(id)
+                    .parent(id)
                     .wh_of(id)
                     .set(state.ids.viewer, ui);
             }
