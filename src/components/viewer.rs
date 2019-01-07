@@ -45,10 +45,17 @@ impl Widget for ImageViewer {
             ..
         } = args;
 
+        let [uw, uh] = ui.wh_of(id).unwrap_or(ui.window_dim());
+        let w = self.image.w as f64;
+        let h = self.image.h as f64;
+        let scale = (uw / w).min(uh / h);
+        let w = scale * w;
+        let h = scale * h;
+
         widget::Image::new(self.image.id)
             .parent(id).graphics_for(id)
-            .w_h(self.image.w as f64, self.image.h as f64)
-            .top_left()
+            .w_h(w, h)
+            .top_left_with_margins((uh - h) / 2.0, (uw - w) / 2.0)
             .set(state.ids.image, ui);
     }
 }
