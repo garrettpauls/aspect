@@ -87,6 +87,7 @@ impl Widget for ImageViewer {
             .top_left_with_margins(scaled.top, scaled.left)
             .set(state.ids.image, ui);
 
+
         let input = ui.widget_input(id);
         for drag in input.drags() {
             use conrod_core::input::MouseButton;
@@ -106,7 +107,37 @@ impl Widget for ImageViewer {
                 state.update(|s| s.scale = scale);
             }
         }
+
+        for scroll in input.scrolls() {
+            let scale = match state.scale {
+                ImageScale::FitAll => ImageScale::Scale {
+                    scale: scaled.scale,
+                    offset_top: scaled.top,
+                    offset_left: scaled.left,
+                },
+                ImageScale::Scale { scale, offset_top, offset_left } => ImageScale::Scale {
+                    scale: adjust_scale(scale, &scroll),
+                    offset_top,
+                    offset_left,
+                },
+            };
+            state.update(|s| s.scale = scale);
+        }
     }
+}
+
+fn adjust_scale(scale: f64, scroll: &conrod_core::event::Scroll) -> f64 {
+    use conrod_core::input::ModifierKey;
+    const MIN_SCALE: f64 = 0.01;
+    const MAX_SCALE: f64 = 100.0;
+
+    let factor = match scroll.modifiers {
+        ModifierKey::CTRL => 1000.0,
+        ModifierKey::SHIFT => 250.0,
+        _ => 500.0,
+    };
+
+    (scale + (scroll.y / -factor)).max(MIN_SCALE).min(MAX_SCALE)
 }
 
 struct ScaledImage {
