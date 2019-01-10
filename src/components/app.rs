@@ -65,7 +65,7 @@ impl Widget for App {
             .wh_of(id)
             .set(state.ids.background, ui);
 
-        let mut actions = Vec::new();
+        let mut actions = self.process_input(ui, state, id);
 
         if let Some(files) = &state.files {
             if let Some(image) = self.image {
@@ -80,17 +80,6 @@ impl Widget for App {
                     .parent(id)
                     .wh_of(id)
                     .set(state.ids.overlay, ui));
-            }
-
-            let releases = ui.widget_input(id).releases().chain(ui.widget_input(state.ids.viewer).releases());
-            for release in releases {
-                match release.button {
-                    Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) =>
-                        state.update(|s| s.is_overlay_visible = !s.is_overlay_visible),
-                    Button::Mouse(MouseButton::Button6, _) => actions.push(Action::ImageNext),
-                    Button::Mouse(MouseButton::X2, _) => actions.push(Action::ImagePrev),
-                    _ => (),
-                }
             }
         } else {
             widget::Text::new("Rerun the program with an argument pointing to a directory or file.\nPicking a file from here may be supported in the future.")
@@ -130,5 +119,24 @@ impl Widget for App {
 
 
         results
+    }
+}
+
+impl App {
+    fn process_input(&self, ui: &mut conrod_core::UiCell, state: &mut widget::State<State>, id: widget::Id) -> Vec<Action> {
+        let mut actions = Vec::new();
+
+        let releases = ui.widget_input(id).releases().chain(ui.widget_input(state.ids.viewer).releases());
+        for release in releases {
+            match release.button {
+                Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) =>
+                    state.update(|s| s.is_overlay_visible = !s.is_overlay_visible),
+                Button::Mouse(MouseButton::Button6, _) | Button::Keyboard(Key::Right) => actions.push(Action::ImageNext),
+                Button::Mouse(MouseButton::X2, _) | Button::Keyboard(Key::Left) => actions.push(Action::ImagePrev),
+                _ => (),
+            }
+        }
+
+        actions
     }
 }
