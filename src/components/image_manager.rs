@@ -114,6 +114,11 @@ impl ImageManager {
             let frame: &gif::Frame = frame;
             screen.blit_frame(frame).map_err(|e| format!("{}", e))?;
 
+            if frame.delay == 0 {
+                log::warn!("Frame delay is zero, blitting next frame immediately");
+                continue;
+            }
+
             let mut buf = Vec::new();
             for p in &screen.pixels.buf {
                 buf.push(p.r);
