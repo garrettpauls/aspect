@@ -7,7 +7,7 @@ use crate::support::ExtensionIs;
 
 #[derive(Debug)]
 pub struct FileList {
-    pub files: Vec<File>,
+    files: Vec<File>,
     current_index: usize,
     current_sort: FileSort,
 }
@@ -96,6 +96,8 @@ impl FileList {
 
     pub fn current_sort(&self) -> &FileSort { &self.current_sort }
 
+    pub fn len(&self) -> usize { self.files.len() }
+
     pub fn set_current(&mut self, current: usize) {
         self.current_index = current % self.files.len();
     }
@@ -143,6 +145,10 @@ impl FileList {
 
         log::info!("Restoring index to {} after sort", new_idx);
         self.set_current(new_idx);
+    }
+
+    pub fn filter_by_text(&mut self, text: &str) {
+        log::info!("Filtering files by text: {}", text);
     }
 }
 

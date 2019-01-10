@@ -9,4 +9,5 @@ pub enum Action {
     Select(usize),
     Sort(FileSort),
     LoadImage(PathBuf),
+    FilterByText(String),
 }

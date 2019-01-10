@@ -10,10 +10,12 @@ widget_ids!(struct Ids {
     prev,
     sort,
     file_list,
+    filter_text,
 });
 
 pub struct State {
     ids: Ids,
+    filter_text: String,
 }
 
 #[derive(WidgetCommon)]
@@ -39,6 +41,7 @@ impl<'a> Widget for ActionOverlay<'a> {
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
         State {
             ids: Ids::new(id_gen),
+            filter_text: "".to_owned(),
         }
     }
 
@@ -53,14 +56,29 @@ impl<'a> Widget for ActionOverlay<'a> {
         } = args;
         let mut actions = Vec::new();
 
+        const ACTION_HEIGHT: f64 = 48.0;
+
+        for event in widget::TextBox::new(&state.filter_text)
+            .parent(id)
+            .w_h(300.0, ACTION_HEIGHT)
+            .top_right()
+            .set(state.ids.filter_text, ui) {
+            use conrod_core::widget::text_box::Event;
+            match event {
+                Event::Update(str) => state.update(|s| s.filter_text = str),
+                Event::Enter => actions.push(Action::FilterByText(state.filter_text.clone()))
+            }
+        }
+
         let (mut events, scrollbar) =
-            widget::ListSelect::single(self.files.files.len())
+            widget::ListSelect::single(self.files.len())
                 .parent(id)
                 .flow_down()
                 .item_size(50.0)
                 .scrollbar_next_to()
-                .w(300.0).h_of(id)
-                .top_right()
+                .w_of(state.ids.filter_text)
+                .h(ui.h_of(id).unwrap_or(ui.win_h) - ACTION_HEIGHT)
+                .down_from(state.ids.filter_text, 0.0)
                 .set(state.ids.file_list, ui);
         while let Some(event) = events.next(ui, |i| self.files.current_index() == i) {
             use conrod_core::widget::list_select::Event;
@@ -84,9 +102,9 @@ impl<'a> Widget for ActionOverlay<'a> {
 
         for _click in widget::Button::new()
             .parent(id)
-            .left_from(state.ids.file_list, 0.0)
-            .align_top_of(state.ids.file_list)
-            .w_h(48.0, 48.0)
+            .left_from(state.ids.filter_text, 0.0)
+            .align_top_of(state.ids.filter_text)
+            .w_h(48.0, ACTION_HEIGHT)
             .label(">>")
             .set(state.ids.next, ui) {
             actions.push(Action::ImageNext);
@@ -96,7 +114,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             .parent(id)
             .left_from(state.ids.next, 0.0)
             .align_top_of(state.ids.next)
-            .w_h(48.0, 48.0)
+            .wh_of(state.ids.next)
             .label("<<")
             .set(state.ids.prev, ui) {
             actions.push(Action::ImagePrev);
@@ -107,7 +125,8 @@ impl<'a> Widget for ActionOverlay<'a> {
             .parent(id)
             .left_from(state.ids.prev, 0.0)
             .align_top_of(state.ids.next)
-            .w_h(192.0, 48.0)
+            .h_of(state.ids.next)
+            .w(192.0)
             .set(state.ids.sort, ui) {
             if Some(new_idx) != idx {
                 if let Some(method) = FILE_SORT_METHODS.get(new_idx) {
