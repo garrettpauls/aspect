@@ -4,6 +4,7 @@ use glium::texture::{RawImage2d, SrgbTexture2d};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use crate::support::ExtensionIs;
 
@@ -13,6 +14,7 @@ pub struct ImageData {
     pub w: u32,
     pub h: u32,
     hash: u64,
+    delay: Duration,
 }
 
 impl PartialEq for ImageData {
@@ -21,67 +23,133 @@ impl PartialEq for ImageData {
 
 pub struct ImageManager {
     image_map: Map<SrgbTexture2d>,
-    current: Option<ImageData>,
+    frames: Vec<ImageData>,
+    current_frame: usize,
+    last_update: Instant,
 }
 
 impl ImageManager {
     pub fn new() -> ImageManager {
         ImageManager {
             image_map: conrod_core::image::Map::new(),
-            current: None,
+            frames: Vec::new(),
+            current_frame: 0,
+            last_update: Instant::now(),
         }
     }
 
     pub fn get_map(&self) -> &Map<SrgbTexture2d> { &self.image_map }
 
-    pub fn current(&self) -> &Option<ImageData> { &self.current }
+    pub fn current(&self) -> Option<&ImageData> { self.frames.get(self.current_frame) }
+
+    pub fn time_to_next_update(&self) -> Option<Duration> {
+        if self.frames.len() < 2 { return None; }
+
+        let frame = &self.frames[self.current_frame];
+        let now = Instant::now();
+
+        let diff = now.duration_since(self.last_update);
+
+        frame.delay.checked_sub(diff)
+            .or_else(|| Some(Duration::new(0, 0)))
+    }
 
     fn unload_image(&mut self) {
-        if let Some(data) = &self.current {
-            self.image_map.remove(data.id);
+        for frame in &self.frames {
+            self.image_map.remove(frame.id);
         }
 
-        self.current = None;
+        self.frames = Vec::new();
+        self.current_frame = 0;
+    }
+
+    pub fn update(&mut self) {
+        if self.frames.len() < 2 { return; }
+
+        let now = Instant::now();
+
+        let diff = now.duration_since(self.last_update);
+
+        let frame = &self.frames[self.current_frame];
+        if frame.delay <= diff {
+            self.current_frame = (self.current_frame + 1) % self.frames.len();
+            self.last_update = now;
+            log::info!("update image frame: {}, {:?} <= {:?}", self.current_frame, frame.delay, diff);
+        }
     }
 
     pub fn load_image(&mut self, display: &Display, path: &Path) -> Result<(), String> {
         log::info!("Loading image from path: {}", path.display());
+        self.unload_image();
 
         if !path.exists() || !path.is_file() {
-            self.unload_image();
             return Err("not a file".to_owned());
         }
 
-        if path.extension_is("gif") {
+        let result = if path.extension_is("gif") {
             self.load_gif(display, path)
         } else {
             self.load_static_image(display, path)
-        }
+        };
+
+        self.last_update = Instant::now();
+        result
     }
 
-    fn load_gif(&mut self, _display: &Display, _path: &Path) -> Result<(), String> {
-        Err("Loading gifs not yet implemented".to_owned())
+    fn load_gif(&mut self, display: &Display, path: &Path) -> Result<(), String> {
+        use gif::Decoder;
+        use gif_dispose::{Screen, RGBA8};
+        use std::fs::File;
+
+        let file = File::open(path).map_err(|e| format!("{}", e))?;
+        let decoder = Decoder::new(file);
+        let mut reader = decoder.read_info().map_err(|e| format!("{}", e))?;
+        let mut screen: Screen<RGBA8> = Screen::from_reader(&reader);
+        let mut frames = Vec::new();
+        let hash = hash_path(path);
+        let w = screen.pixels.width() as u32;
+        let h = screen.pixels.height() as u32;
+
+        while let Some(frame) = reader.read_next_frame().map_err(|e| format!("{}", e))? {
+            let frame: &gif::Frame = frame;
+            screen.blit_frame(frame).map_err(|e| format!("{}", e))?;
+
+            let mut buf = Vec::new();
+            for p in &screen.pixels.buf {
+                buf.push(p.r);
+                buf.push(p.g);
+                buf.push(p.b);
+                buf.push(p.a);
+            }
+
+            let raw = RawImage2d::from_raw_rgba_reversed(&buf, (w, h));
+            let texture = SrgbTexture2d::new(display, raw).map_err(|e| format!("{}", e))?;
+
+            frames.push(ImageData {
+                id: self.image_map.insert(texture),
+                w,
+                h,
+                delay: Duration::from_millis(frame.delay as u64 * 10),
+                hash,
+            });
+        }
+
+        self.frames = frames;
+        self.current_frame = 0;
+        Ok(())
     }
 
     fn load_static_image(&mut self, display: &Display, path: &Path) -> Result<(), String> {
-        let (image, (w, h)) = match load_image_from_file(display, path) {
-            Ok(img) => img,
-            Err(e) => {
-                self.unload_image();
-                return Err(e);
-            }
-        };
+        let (image, (w, h)) = load_image_from_file(display, path)?;
 
-        if let Some(ImageData { id, .. }) = self.current {
-            self.image_map.replace(id, image);
-        } else {
-            self.current = Some(ImageData {
-                id: self.image_map.insert(image),
-                w,
-                h,
-                hash: hash_path(&path),
-            });
-        }
+        self.current_frame = 0;
+        self.frames = vec![ImageData {
+            id: self.image_map.insert(image),
+            w,
+            h,
+            hash: hash_path(&path),
+            delay: Duration::default(),
+        }];
 
         Ok(())
     }

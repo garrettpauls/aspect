@@ -35,7 +35,7 @@ pub fn run() {
 
     let mut event_loop = EventLoop::new();
     'main: loop {
-        for event in event_loop.next(&mut events_loop) {
+        for event in event_loop.next(&mut events_loop, image_manager.time_to_next_update()) {
             if let Some(event) = conrod_winit::convert_event(event.clone(), &display) {
                 ui.handle_event(event);
                 event_loop.needs_update();
@@ -50,10 +50,12 @@ pub fn run() {
             }
         }
 
+        image_manager.update();
+
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            for action in App::new(image_manager.current().clone())
+            for action in App::new(image_manager.current().cloned())
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()

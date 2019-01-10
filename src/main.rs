@@ -6,6 +6,8 @@ extern crate conrod_derive;
 extern crate conrod_glium;
 extern crate conrod_winit;
 extern crate env_logger;
+extern crate gif;
+extern crate gif_dispose;
 extern crate image;
 extern crate log;
 extern crate rand;

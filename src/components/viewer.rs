@@ -66,6 +66,12 @@ impl Widget for ImageViewer {
                     s.scale = ImageScale::FitAll;
                 });
                 &self.image
+            } else if image.id != self.image.id {
+                log::info!("Updating image id: {:?} -> {:?}", image.id, self.image.id);
+                state.update(|s| {
+                    s.image = Some(self.image.clone());
+                });
+                &self.image
             } else {
                 image
             }
