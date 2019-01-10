@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::fmt;
 
 use super::file::File;
+use crate::support::ExtensionIs;
 
 #[derive(Debug)]
 pub struct FileList {
@@ -145,13 +146,12 @@ impl FileList {
     }
 }
 
-pub static SUPPORTED_FILE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "bmp"];
+pub static SUPPORTED_FILE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "bmp", "gif"];
 
 fn is_image_file(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }
 
-    let ext = path.extension().map(|x| x.to_str()).unwrap_or(None).unwrap_or("").to_lowercase();
-    SUPPORTED_FILE_EXTENSIONS.contains(&&ext[..])
+    SUPPORTED_FILE_EXTENSIONS.iter().any(|ext| path.extension_is(*ext))
 }

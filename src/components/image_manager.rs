@@ -5,6 +5,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 
+use crate::support::ExtensionIs;
+
 #[derive(Debug, Clone)]
 pub struct ImageData {
     pub id: Id,
@@ -50,6 +52,18 @@ impl ImageManager {
             return Err("not a file".to_owned());
         }
 
+        if path.extension_is("gif") {
+            self.load_gif(display, path)
+        } else {
+            self.load_static_image(display, path)
+        }
+    }
+
+    fn load_gif(&mut self, _display: &Display, _path: &Path) -> Result<(), String> {
+        Err("Loading gifs not yet implemented".to_owned())
+    }
+
+    fn load_static_image(&mut self, display: &Display, path: &Path) -> Result<(), String> {
         let (image, (w, h)) = match load_image_from_file(display, path) {
             Ok(img) => img,
             Err(e) => {
