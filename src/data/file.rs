@@ -1,10 +1,19 @@
 use std::fmt;
 use std::path::PathBuf;
 use std::time::SystemTime;
+use std::convert::From;
 
 #[derive(Debug)]
 pub struct File {
     pub path: PathBuf,
+}
+
+impl From<&str> for File {
+    fn from(path: &str) -> Self {
+        File {
+            path: PathBuf::from(path)
+        }
+    }
 }
 
 impl File {

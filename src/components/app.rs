@@ -102,7 +102,10 @@ impl Widget for App {
                 Action::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
                 Action::Select(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(i) }),
                 Action::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(srt) }),
-                Action::FilterByText(txt) => state.update(|s| if let Some(f) = &mut s.files { f.filter_by_text(&txt) }),
+                Action::FilterByText(txt) => state.update(|s| if let Some(f) = &mut s.files {
+                    let new = f.get_filter().clone().with_name(&txt);
+                    f.apply_filter(new)
+                }),
                 unhandled => results.push(unhandled),
             }
         }
