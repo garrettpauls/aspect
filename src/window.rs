@@ -5,6 +5,7 @@ use ttf_noto_sans;
 
 use crate::components::{Action, App, ImageManager};
 use crate::support::{EventLoop, GliumDisplayWinitWrapper};
+use crate::res::Resources;
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
 const INITIAL_WINDOW_HEIGHT: u32 = 500;
@@ -31,6 +32,8 @@ pub fn run() {
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
     let mut image_manager = ImageManager::new(&display.0);
 
+    let resources = Resources::load(&mut image_manager).unwrap();
+
     let ids = Ids::new(ui.widget_id_generator());
 
     let mut event_loop = EventLoop::new();
@@ -55,7 +58,7 @@ pub fn run() {
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            for action in App::new(image_manager.current().cloned())
+            for action in App::new(image_manager.current().cloned(), &resources)
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()

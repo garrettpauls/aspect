@@ -2,7 +2,7 @@ use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 use std::fmt;
 
-use super::{File, Filter};
+use super::{File, Filter, Rating};
 use crate::support::ExtensionIs;
 
 #[derive(Debug)]
@@ -78,6 +78,7 @@ impl FileList {
 
             file_names.push(File {
                 path: entry.path(),
+                rating: None,
             });
         }
 
@@ -102,6 +103,8 @@ impl FileList {
 impl FileList {
     pub fn current(&self) -> Option<&File> { self.files.get(self.current_index) }
 
+    fn current_mut(&mut self) -> Option<&mut File> { self.files.get_mut(self.current_index) }
+
     pub fn current_index(&self) -> usize { self.current_index }
 
     pub fn current_sort(&self) -> &FileSort { &self.current_sort }
@@ -110,6 +113,14 @@ impl FileList {
 
     pub fn set_current(&mut self, current: usize) {
         self.current_index = current % self.files.len();
+    }
+
+    pub fn set_rating(&mut self, rating: Option<Rating>) {
+        if let Some(current) = self.current_mut() {
+            current.rating = rating;
+            // TODO: persist rating
+            log::warn!("TODO: persist rating of {:?} for file {}", current.rating, current.path.display());
+        }
     }
 
     pub fn increment_current(&mut self, amount: i64) {
@@ -224,7 +235,7 @@ mod tests {
             AC3,
             r"C:\files\4bc.png",
             r"C:\files\5ac.png",
-        ].iter().map(|f| File { path: PathBuf::from(*f) }).collect());
+        ].iter().map(|f| File { path: PathBuf::from(*f), rating: None }).collect());
 
         list.set_current(2);
         list.apply_filter(Filter::default().with_name("a"));

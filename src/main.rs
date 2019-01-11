@@ -15,6 +15,7 @@ extern crate ttf_noto_sans;
 
 mod components;
 mod data;
+mod res;
 mod support;
 mod theme;
 mod window;

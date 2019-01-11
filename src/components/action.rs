@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::data::FileSort;
+use crate::data::{FileSort, Rating};
 
 #[derive(Clone, Debug)]
 pub enum Action {
@@ -10,4 +10,5 @@ pub enum Action {
     Sort(FileSort),
     LoadImage(PathBuf),
     FilterByText(String),
+    SetRating(Option<Rating>),
 }

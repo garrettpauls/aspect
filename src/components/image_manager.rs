@@ -160,18 +160,24 @@ impl<'a> ImageManager<'a> {
 
         Ok(())
     }
+
+    pub fn load_resource_image(&mut self, buffer: &[u8]) -> Result<Id, String> {
+        let image = image::load_from_memory(buffer).map_err(|e| format!("{}", e))?;
+        let (texture, _) = texture_from_image(self.display, image)?;
+        Ok(self.image_map.insert(texture))
+    }
 }
 
 fn load_image_from_file(display: &Display, path: &Path) -> Result<(SrgbTexture2d, (u32, u32)), String> {
-    let (raw_image, dimensions) = image::open(path)
-        .map(|i| {
-            let rgba = i.to_rgba();
-            let dimensions = rgba.dimensions();
-            (RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions), dimensions)
-        })
-        .map_err(|e| format!("{}", e))?;
+    let image = image::open(path).map_err(|e| format!("{}", e))?;
+    texture_from_image(display, image)
+}
 
-    SrgbTexture2d::new(display, raw_image)
+fn texture_from_image(display: &Display, image: image::DynamicImage) -> Result<(SrgbTexture2d, (u32, u32)), String> {
+    let rgba = image.to_rgba();
+    let dimensions = rgba.dimensions();
+    let raw = RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions);
+    SrgbTexture2d::new(display, raw)
         .map(|t| (t, dimensions))
         .map_err(|e| format!("{}", e))
 }

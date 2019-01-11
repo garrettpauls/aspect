@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use super::{Action, ActionOverlay, ImageViewer, ImageData};
 use crate::data::FileList;
+use crate::res::Resources;
 
 widget_ids!(struct Ids {
     background,
@@ -21,21 +22,23 @@ pub struct State {
 }
 
 #[derive(WidgetCommon)]
-pub struct App {
+pub struct App<'a> {
     #[conrod(common_builder)] common: widget::CommonBuilder,
     image: Option<ImageData>,
+    res: &'a Resources,
 }
 
-impl App {
-    pub fn new(image: Option<ImageData>) -> Self {
+impl<'a> App<'a> {
+    pub fn new(image: Option<ImageData>, res: &'a Resources) -> Self {
         App {
             common: widget::CommonBuilder::default(),
             image,
+            res,
         }
     }
 }
 
-impl Widget for App {
+impl<'a> Widget for App<'a> {
     type State = State;
     type Style = ();
     type Event = Vec<Action>;
@@ -76,7 +79,7 @@ impl Widget for App {
             }
 
             if state.is_overlay_visible {
-                actions.append(&mut ActionOverlay::new(&files)
+                actions.append(&mut ActionOverlay::new(&files, self.res)
                     .parent(id)
                     .wh_of(id)
                     .set(state.ids.overlay, ui));
@@ -106,6 +109,7 @@ impl Widget for App {
                     let new = f.get_filter().clone().with_name(&txt);
                     f.apply_filter(new)
                 }),
+                Action::SetRating(rating) => state.update(|s| if let Some(f) = &mut s.files { f.set_rating(rating) }),
                 unhandled => results.push(unhandled),
             }
         }
@@ -126,7 +130,7 @@ impl Widget for App {
     }
 }
 
-impl App {
+impl<'a> App<'a> {
     fn process_input(&self, ui: &mut conrod_core::UiCell, state: &mut widget::State<State>, id: widget::Id) -> Vec<Action> {
         let mut actions = Vec::new();
 

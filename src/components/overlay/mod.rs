@@ -2,8 +2,10 @@ use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
 
 use crate::components::Action;
 use crate::data::{FileList, FILE_SORT_METHODS};
+use crate::res::Resources;
 
 mod list_item;
+mod rating;
 
 widget_ids!(struct Ids {
     next,
@@ -11,6 +13,7 @@ widget_ids!(struct Ids {
     sort,
     file_list,
     filter_text,
+    rating,
 });
 
 pub struct State {
@@ -22,13 +25,15 @@ pub struct State {
 pub struct ActionOverlay<'a> {
     #[conrod(common_builder)] common: widget::CommonBuilder,
     files: &'a FileList,
+    res: &'a Resources,
 }
 
 impl<'a> ActionOverlay<'a> {
-    pub fn new(files: &'a FileList) -> Self {
+    pub fn new(files: &'a FileList, res: &'a Resources) -> Self {
         ActionOverlay {
             common: widget::CommonBuilder::default(),
             files,
+            res,
         }
     }
 }
@@ -133,6 +138,16 @@ impl<'a> Widget for ActionOverlay<'a> {
                     actions.push(Action::Sort(*method));
                 }
             }
+        }
+
+        let current = self.files.current();
+        if let Some(rating) = rating::StarRating::new(current.and_then(|f| f.rating.clone()), self.res)
+            .parent(id)
+            .align_left_of(state.ids.sort)
+            .down_from(state.ids.sort, 0.0)
+            .w_of(state.ids.sort).h(48.0)
+            .set(state.ids.rating, ui) {
+            actions.push(Action::SetRating(rating));
         }
 
         actions

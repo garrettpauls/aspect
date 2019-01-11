@@ -1,17 +1,34 @@
 use std::fmt;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use std::convert::From;
+use std::convert::{Into, From};
+
+#[derive(Debug, Clone)]
+pub struct Rating(usize);
+
+impl From<usize> for Rating {
+    fn from(rating: usize) -> Self {
+        Rating(rating.max(1).min(5))
+    }
+}
+
+impl Into<usize> for Rating {
+    fn into(self) -> usize {
+        self.0
+    }
+}
 
 #[derive(Debug)]
 pub struct File {
     pub path: PathBuf,
+    pub rating: Option<Rating>,
 }
 
 impl From<&str> for File {
     fn from(path: &str) -> Self {
         File {
-            path: PathBuf::from(path)
+            path: PathBuf::from(path),
+            rating: None,
         }
     }
 }

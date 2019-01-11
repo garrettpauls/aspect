@@ -74,6 +74,7 @@ mod tests {
     pub fn matches_by_name() {
         let file = File {
             path: PathBuf::from(r"C:\path\to\file.png"),
+            rating: None,
         };
 
         test_matches(&Filter::default(), &file, true);
