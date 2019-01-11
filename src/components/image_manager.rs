@@ -21,20 +21,22 @@ impl PartialEq for ImageData {
     fn eq(&self, other: &ImageData) -> bool { self.hash == other.hash }
 }
 
-pub struct ImageManager {
+pub struct ImageManager<'a> {
     image_map: Map<SrgbTexture2d>,
     frames: Vec<ImageData>,
     current_frame: usize,
     last_update: Instant,
+    display: &'a Display,
 }
 
-impl ImageManager {
-    pub fn new() -> ImageManager {
+impl<'a> ImageManager<'a> {
+    pub fn new(display: &'a Display) -> ImageManager {
         ImageManager {
             image_map: conrod_core::image::Map::new(),
             frames: Vec::new(),
             current_frame: 0,
             last_update: Instant::now(),
+            display,
         }
     }
 
@@ -78,7 +80,7 @@ impl ImageManager {
         }
     }
 
-    pub fn load_image(&mut self, display: &Display, path: &Path) -> Result<(), String> {
+    pub fn load_image(&mut self, path: &Path) -> Result<(), String> {
         log::info!("Loading image from path: {}", path.display());
         self.unload_image();
 
@@ -87,16 +89,16 @@ impl ImageManager {
         }
 
         let result = if path.extension_is("gif") {
-            self.load_gif(display, path)
+            self.load_gif(path)
         } else {
-            self.load_static_image(display, path)
+            self.load_static_image(path)
         };
 
         self.last_update = Instant::now();
         result
     }
 
-    fn load_gif(&mut self, display: &Display, path: &Path) -> Result<(), String> {
+    fn load_gif(&mut self, path: &Path) -> Result<(), String> {
         use gif::Decoder;
         use gif_dispose::{Screen, RGBA8};
         use std::fs::File;
@@ -128,7 +130,7 @@ impl ImageManager {
             }
 
             let raw = RawImage2d::from_raw_rgba_reversed(&buf, (w, h));
-            let texture = SrgbTexture2d::new(display, raw).map_err(|e| format!("{}", e))?;
+            let texture = SrgbTexture2d::new(self.display, raw).map_err(|e| format!("{}", e))?;
 
             frames.push(ImageData {
                 id: self.image_map.insert(texture),
@@ -144,8 +146,8 @@ impl ImageManager {
         Ok(())
     }
 
-    fn load_static_image(&mut self, display: &Display, path: &Path) -> Result<(), String> {
-        let (image, (w, h)) = load_image_from_file(display, path)?;
+    fn load_static_image(&mut self, path: &Path) -> Result<(), String> {
+        let (image, (w, h)) = load_image_from_file(self.display, path)?;
 
         self.current_frame = 0;
         self.frames = vec![ImageData {

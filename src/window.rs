@@ -29,7 +29,7 @@ pub fn run() {
     ui.theme = super::theme::default_theme();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
-    let mut image_manager = ImageManager::new();
+    let mut image_manager = ImageManager::new(&display.0);
 
     let ids = Ids::new(ui.widget_id_generator());
 
@@ -61,7 +61,7 @@ pub fn run() {
                 .top_left()
                 .set(ids.app, ui) {
                 match action {
-                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&display.0, &path) { log::error!("Failed to load image {}: {}", path.display(), e) },
+                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&path) { log::error!("Failed to load image {}: {}", path.display(), e) },
                     _ => ()
                 }
             }
