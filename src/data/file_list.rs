@@ -1,8 +1,10 @@
 use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 use std::fmt;
+use std::ops::Drop;
 
 use super::{File, Filter, Rating};
+use super::persist::PersistenceManager;
 use crate::support::ExtensionIs;
 
 #[derive(Debug)]
@@ -12,6 +14,18 @@ pub struct FileList {
     current_sort: FileSort,
     filter: Filter,
     filtered_files: Vec<File>,
+    persist: Option<PersistenceManager>,
+}
+
+impl Drop for FileList {
+    fn drop(&mut self) {
+        use std::mem::replace;
+        if let Some(p) = replace(&mut self.persist, None) {
+            if let Err(e) = p.close() {
+                log::error!("Failed to close persistence manager: {}", e);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -82,16 +96,21 @@ impl FileList {
             });
         }
 
-        Some(FileList::from_files(file_names))
+        let persist = PersistenceManager::open_dir(path)
+            .map_err(|e| log::error!("Could not initialize persistence manager, functionality is limited! {}", e))
+            .ok();
+
+        Some(FileList::from_files(file_names, persist))
     }
 
-    pub fn from_files(files: Vec<File>) -> Self {
+    pub fn from_files(files: Vec<File>, persist: Option<PersistenceManager>) -> Self {
         let mut list = FileList {
             files,
             current_index: 0,
             current_sort: FileSort::Name,
             filter: Filter::default(),
             filtered_files: Vec::new(),
+            persist,
         };
 
         list.apply_sort();
@@ -229,13 +248,14 @@ mod tests {
     #[test]
     pub fn filter_syncs_selected_item() {
         const AC3: &str = r"C:\files\3ac.png";
-        let mut list = FileList::from_files(vec![
+        let files = vec![
             r"C:\files\1a.png",
             r"C:\files\2b.png",
             AC3,
             r"C:\files\4bc.png",
             r"C:\files\5ac.png",
-        ].iter().map(|f| File { path: PathBuf::from(*f), rating: None }).collect());
+        ].iter().map(|f| File { path: PathBuf::from(*f), rating: None }).collect();
+        let mut list = FileList::from_files(files, None);
 
         list.set_current(2);
         list.apply_filter(Filter::default().with_name("a"));
