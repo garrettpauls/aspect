@@ -76,7 +76,7 @@ impl<'a> ImageManager<'a> {
         if frame.delay <= diff {
             self.current_frame = (self.current_frame + 1) % self.frames.len();
             self.last_update = now;
-            log::info!("update image frame: {}, {:?} <= {:?}", self.current_frame, frame.delay, diff);
+            log::trace!("update image frame: {}, {:?} <= {:?}", self.current_frame, frame.delay, diff);
         }
     }
 

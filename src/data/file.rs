@@ -6,9 +6,17 @@ use std::convert::{Into, From};
 #[derive(Debug, Clone)]
 pub struct Rating(usize);
 
+impl Rating {
+    pub fn as_i64(&self) -> i64 { self.0 as i64 }
+}
+
 impl From<usize> for Rating {
-    fn from(rating: usize) -> Self {
-        Rating(rating.max(1).min(5))
+    fn from(rating: usize) -> Self { Rating::from(rating as i64) }
+}
+
+impl From<i64> for Rating {
+    fn from(rating: i64) -> Self {
+        Rating(rating.max(1).min(5) as usize)
     }
 }
 
@@ -16,6 +24,10 @@ impl Into<usize> for Rating {
     fn into(self) -> usize {
         self.0
     }
+}
+
+impl Into<i64> for Rating {
+    fn into(self) -> i64 { self.0 as i64 }
 }
 
 #[derive(Debug)]
@@ -34,6 +46,13 @@ impl From<&str> for File {
 }
 
 impl File {
+    pub fn name(&self) -> String {
+        match self.path.file_name() {
+            Some(s) => s.to_string_lossy().to_string(),
+            None => "".to_owned()
+        }
+    }
+
     pub fn size(&self) -> FileSize {
         FileSize(self.path.metadata().map(|m| m.len()).unwrap_or(0))
     }

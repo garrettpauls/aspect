@@ -14,3 +14,21 @@ impl<T, E> ErrToString<T> for Result<T, E>
         self.map_err(|e| format!("{}", e))
     }
 }
+
+
+pub trait LogError<T> {
+    fn log_err(self) -> Option<T>;
+}
+
+impl<T, E> LogError<T> for Result<T, E>
+    where E: std::fmt::Display {
+    fn log_err(self) -> Option<T> {
+        match self {
+            Ok(v) => Some(v),
+            Err(e) => {
+                log::error!("{}", e);
+                None
+            }
+        }
+    }
+}

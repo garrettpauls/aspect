@@ -5,7 +5,7 @@ use std::ops::Drop;
 
 use super::{File, Filter, Rating};
 use super::persist::PersistenceManager;
-use crate::support::ExtensionIs;
+use crate::support::{ExtensionIs, LogError};
 
 #[derive(Debug)]
 pub struct FileList {
@@ -137,9 +137,12 @@ impl FileList {
     pub fn set_rating(&mut self, rating: Option<Rating>) {
         if let Some(current) = self.current_mut() {
             current.rating = rating;
-            // TODO: persist rating
-            log::warn!("TODO: persist rating of {:?} for file {}", current.rating, current.path.display());
         }
+
+        match (&self.current(), &self.persist) {
+            (Some(current), Some(persist)) => persist.set_rating(current, &current.rating),
+            _ => Ok(())
+        }.log_err();
     }
 
     pub fn increment_current(&mut self, amount: i64) {

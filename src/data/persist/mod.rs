@@ -3,7 +3,9 @@ extern crate rusqlite;
 mod migrations;
 
 use std::path::Path;
-use rusqlite::Connection;
+use rusqlite::{Connection, Error};
+use rusqlite::types::{ToSql, ToSqlOutput, Value};
+use crate::data::{File, Rating};
 use crate::support::ErrToString;
 
 #[derive(Debug)]
@@ -11,6 +13,7 @@ pub struct PersistenceManager {
     conn: Connection,
 }
 
+// lifetime
 impl PersistenceManager {
     pub fn open_dir(dir: &Path) -> Result<Self, String> {
         let db_file = dir.join("aspect.sqlite");
@@ -25,5 +28,22 @@ impl PersistenceManager {
 
     pub fn close(self) -> Result<(), String> {
         self.conn.close().map_err(|(_, e)| format!("{}", e))
+    }
+}
+
+// file updates
+impl PersistenceManager {
+    pub fn set_rating(&self, file: &File, rating: &Option<Rating>) -> Result<(), String> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO File (name, rating) VALUES (?1, ?2)",
+            &[&file.name() as &ToSql, rating])
+            .map(|_| ())
+            .err_to_string()
+    }
+}
+
+impl ToSql for Rating {
+    fn to_sql(&self) -> Result<ToSqlOutput<'_>, Error> {
+        Ok(ToSqlOutput::Owned(Value::Integer(self.as_i64())))
     }
 }
