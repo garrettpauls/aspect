@@ -16,7 +16,7 @@ pub struct PersistenceManager {
 // lifetime
 impl PersistenceManager {
     pub fn open_dir(dir: &Path) -> Result<Self, String> {
-        let db_file = dir.join("aspect.sqlite");
+        let db_file = dir.join(".aspect.sqlite");
 
         migrations::migrate(&db_file)?;
         let conn = Connection::open(db_file).err_to_string()?;
