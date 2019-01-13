@@ -99,6 +99,9 @@ impl FileList {
         let persist = PersistenceManager::open_dir(path)
             .map_err(|e| log::error!("Could not initialize persistence manager, functionality is limited! {}", e))
             .ok();
+        if let Some(persist) = &persist {
+            persist.populate_files(&mut file_names).log_err();
+        }
 
         Some(FileList::from_files(file_names, persist))
     }

@@ -3,7 +3,7 @@ extern crate rusqlite;
 mod migrations;
 
 use std::path::Path;
-use rusqlite::{Connection, Error};
+use rusqlite::{Connection, Error, NO_PARAMS};
 use rusqlite::types::{ToSql, ToSqlOutput, Value};
 use crate::data::{File, Rating};
 use crate::support::ErrToString;
@@ -39,6 +39,23 @@ impl PersistenceManager {
             &[&file.name() as &ToSql, rating])
             .map(|_| ())
             .err_to_string()
+    }
+
+    pub fn populate_files(&self, files: &mut Vec<File>) -> Result<(), String> {
+        use std::collections::HashMap;
+        let results: HashMap<String, _> = self.conn
+            .prepare("SELECT name, rating FROM File").err_to_string()?
+            .query_map(NO_PARAMS, |row| (row.get::<_, String>(0), row.get::<_, Option<i64>>(1))).err_to_string()?
+            .filter_map(|result| result.ok())
+            .collect();
+
+        for file in files {
+            if let Some(rating) = results.get(&file.name()) {
+                file.rating = rating.map(&Rating::from);
+            }
+        }
+
+        Ok(())
     }
 }
 
