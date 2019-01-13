@@ -1,4 +1,4 @@
-use conrod_core::{widget, widget::Id, color, Widget, Sizeable, Positionable, Colorable};
+use conrod_core::{widget, widget::Id, Widget, Sizeable, Positionable};
 
 use crate::data::Rating;
 use crate::res::Resources;
@@ -57,14 +57,13 @@ impl<'a> Widget for StarRating<'a> {
             state,
             ui,
             id,
+            rect,
             ..
         } = args;
 
-        widget::Canvas::new()
+        widget::Rectangle::fill_with(rect.dim(), ui.theme.shape_color)
             .parent(id).graphics_for(id)
-            .top_left()
-            .wh_of(id)
-            .color(color::DARK_RED)
+            .xy(rect.xy())
             .set(state.ids.background, ui);
 
         let rating = self.rating.map(|r| r.into()).unwrap_or(0);
@@ -82,9 +81,10 @@ impl<'a> Widget for StarRating<'a> {
                 .image_color_with_feedback(ui.theme.shape_color);
 
             let b = if i == 0 {
-                b.top_left()
+                b.top_left_of(state.ids.background)
             } else {
-                b.align_top().right_from(state.ids.stars[i - 1], 0.0)
+                let prev = state.ids.stars[i - 1];
+                b.align_top_of(prev).right_from(prev, 0.0)
             };
 
             for _click in b.set(state.ids.stars[i], ui) {

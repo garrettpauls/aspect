@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 use std::convert::{Into, From};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Rating(usize);
 
 impl Rating {
@@ -16,6 +16,12 @@ impl From<usize> for Rating {
 
 impl From<i64> for Rating {
     fn from(rating: i64) -> Self {
+        Rating(rating.max(1).min(5) as usize)
+    }
+}
+
+impl From<i32> for Rating {
+    fn from(rating: i32) -> Self {
         Rating(rating.max(1).min(5) as usize)
     }
 }

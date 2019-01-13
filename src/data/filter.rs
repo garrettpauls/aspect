@@ -1,11 +1,12 @@
 use std::default::Default;
 
-use super::File;
+use super::{File, Rating};
 
 #[derive(Debug, Clone)]
 pub struct Filter {
     /// The file name should contain this. This value should always be lowercase.
     file_name: Option<String>,
+    rating: Option<Rating>,
 }
 
 // Builder methods
@@ -14,12 +15,18 @@ impl Filter {
         self.file_name = if name.is_empty() { None } else { Some(name.to_lowercase()) };
         self
     }
+
+    pub fn with_rating(mut self, rating: &Option<Rating>) -> Self {
+        self.rating = rating.clone();
+        self
+    }
 }
 
 impl Default for Filter {
     fn default() -> Self {
         Filter {
-            file_name: None
+            file_name: None,
+            rating: None,
         }
     }
 }
@@ -35,7 +42,14 @@ impl Filter {
             (Some(new), Some(current)) => new.starts_with(current)
         };
 
-        is_file_name_subset
+        let is_rating_subset = match (&self.rating, &other.rating) {
+            (None, None) => true,
+            (Some(_), None) => true,
+            (None, Some(_)) => false,
+            (Some(new), Some(current)) => current <= new,
+        };
+
+        is_file_name_subset && is_rating_subset
     }
 
     pub fn matches(&self, file: &File) -> bool {
@@ -45,14 +59,20 @@ impl Filter {
             (Some(filter), Some(name)) => name.to_str().map(|s| s.to_lowercase().contains(&*filter)).unwrap_or(false)
         };
 
-        name_matches
+        let rating_matches = match (&self.rating, &file.rating) {
+            (Some(_), None) => false,
+            (None, _) => true,
+            (Some(filter), Some(rating)) => filter <= rating,
+        };
+
+        name_matches && rating_matches
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::File;
+    use super::super::{File, Rating};
     use std::path::PathBuf;
 
     #[test]
@@ -64,6 +84,20 @@ mod tests {
         test_is_subset_of(&Filter::default().with_name("abcd"), &current, true);
         test_is_subset_of(&Filter::default().with_name(""), &Filter::default(), true);
         test_is_subset_of(&Filter::default().with_name("a"), &Filter::default(), true);
+    }
+
+    #[test]
+    pub fn is_subset_of_by_rating() {
+        let current = Filter::default().with_rating(&Some(Rating::from(3)));
+        test_is_subset_of(&Filter::default().with_rating(&None), &current, false);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(1))), &current, false);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(2))), &current, false);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(3))), &current, true);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(4))), &current, true);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(5))), &current, true);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(1))), &Filter::default(), true);
+        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(5))), &Filter::default(), true);
+        test_is_subset_of(&Filter::default().with_rating(&None), &Filter::default(), true);
     }
 
     fn test_is_subset_of(filter: &Filter, current: &Filter, expected: bool) {
@@ -90,6 +124,21 @@ mod tests {
         test_matches(&Filter::default().with_name("file*png"), &file, false);
         test_matches(&Filter::default().with_name("*file.png"), &file, false);
         test_matches(&Filter::default().with_name("other.png"), &file, false);
+    }
+
+    #[test]
+    pub fn matches_by_rating() {
+        let file = File {
+            path: PathBuf::from(""),
+            rating: Some(Rating::from(3)),
+        };
+
+        test_matches(&Filter::default(), &file, true);
+        test_matches(&Filter::default().with_rating(&Some(Rating::from(1))), &file, true);
+        test_matches(&Filter::default().with_rating(&Some(Rating::from(2))), &file, true);
+        test_matches(&Filter::default().with_rating(&Some(Rating::from(3))), &file, true);
+        test_matches(&Filter::default().with_rating(&Some(Rating::from(4))), &file, false);
+        test_matches(&Filter::default().with_rating(&Some(Rating::from(5))), &file, false);
     }
 
     fn test_matches(filter: &Filter, file: &File, expected: bool) {

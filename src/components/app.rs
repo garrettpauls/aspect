@@ -109,6 +109,10 @@ impl<'a> Widget for App<'a> {
                     let new = f.get_filter().clone().with_name(&txt);
                     f.apply_filter(new)
                 }),
+                Action::FilterByRating(rating) => state.update(|s| if let Some(f) = &mut s.files {
+                    let new = f.get_filter().clone().with_rating(&rating);
+                    f.apply_filter(new)
+                }),
                 Action::SetRating(rating) => state.update(|s| if let Some(f) = &mut s.files { f.set_rating(rating) }),
                 unhandled => results.push(unhandled),
             }

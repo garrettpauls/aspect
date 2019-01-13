@@ -10,5 +10,6 @@ pub enum Action {
     Sort(FileSort),
     LoadImage(PathBuf),
     FilterByText(String),
+    FilterByRating(Option<Rating>),
     SetRating(Option<Rating>),
 }
