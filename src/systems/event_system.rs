@@ -15,7 +15,10 @@ impl EventSystem {
         }
     }
 
-    pub fn push(&mut self, event: AppEvent) { self.pending.push(event); }
+    pub fn push(&mut self, event: AppEvent) {
+        log::trace!("Queuing event: {:?}", event);
+        self.pending.push(event);
+    }
 
     pub fn events(&self) -> Iter<AppEvent> { self.current.iter() }
 
