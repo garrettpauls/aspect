@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use crate::support::{ExtensionIs, ErrToString};
 use super::{EventSystem, AppEvent, events as e};
+use crate::support::LogError;
 
 #[derive(Debug, Copy, Clone)]
 struct FrameData {
@@ -81,6 +82,7 @@ impl<'a> ImageSystem<'a> {
 impl<'a> ImageSystem<'a> {
     fn unload_image(&mut self) {
         for frame in &self.frames {
+            log::debug!("Unloading image: {:?}", frame.id);
             self.image_map.remove(frame.id);
         }
 
@@ -97,14 +99,28 @@ impl<'a> ImageSystem<'a> {
             return None;
         }
 
-        let result = if path.extension_is("gif") {
-            self.load_gif(path)
-        } else {
-            self.load_static_image(path)
-        };
+        let images = ImageLoader::load(path).log_err()?;
 
+        log::debug!("Converting raw frames to textures");
+        let mut frames = Vec::new();
+        for (raw, delay) in images {
+            let w = raw.width;
+            let h = raw.height;
+            if let Some(texture) = SrgbTexture2d::new(self.display, raw).log_err() {
+                frames.push(FrameData {
+                    id: self.image_map.insert(texture),
+                    w,
+                    h,
+                    delay,
+                });
+            }
+        }
+
+        self.frames = frames;
+        self.current_frame = 0;
         self.last_update = Instant::now();
-        if let Ok(frame) = result {
+
+        if let Some(frame) = self.frames.get(0) {
             Some(e::Image::Loaded {
                 id: frame.id,
                 w: frame.w,
@@ -115,7 +131,38 @@ impl<'a> ImageSystem<'a> {
         }
     }
 
-    fn load_gif(&mut self, path: &Path) -> Result<FrameData, String> {
+    pub fn load_resource_image(&mut self, buffer: &[u8]) -> Result<Id, String> {
+        let image = image::load_from_memory(buffer).err_to_string()?;
+        let (texture, _) = texture_from_image(self.display, image)?;
+        Ok(self.image_map.insert(texture))
+    }
+}
+
+fn texture_from_image(display: &Display, image: image::DynamicImage) -> Result<(SrgbTexture2d, (u32, u32)), String> {
+    let rgba = image.to_rgba();
+    let dimensions = rgba.dimensions();
+    let raw = RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions);
+    SrgbTexture2d::new(display, raw)
+        .map(|t| (t, dimensions))
+        .err_to_string()
+}
+
+struct ImageLoader;
+
+impl ImageLoader {
+    pub fn load(path: &Path) -> Result<Vec<(RawImage2d<u8>, Duration)>, String> {
+        if !path.exists() || !path.is_file() {
+            return Err(format!("Could not load image from path which is not a file: {}", path.display()));
+        }
+
+        if path.extension_is("gif") {
+            ImageLoader::load_gif(path)
+        } else {
+            ImageLoader::load_static_image(path)
+        }
+    }
+
+    fn load_gif(path: &Path) -> Result<Vec<(RawImage2d<u8>, Duration)>, String> {
         use gif::Decoder;
         use gif_dispose::{Screen, RGBA8};
         use std::fs::File;
@@ -146,58 +193,23 @@ impl<'a> ImageSystem<'a> {
             }
 
             let raw = RawImage2d::from_raw_rgba_reversed(&buf, (w, h));
-            let texture = SrgbTexture2d::new(self.display, raw).err_to_string()?;
 
-            frames.push(FrameData {
-                id: self.image_map.insert(texture),
-                w,
-                h,
-                delay: Duration::from_millis(frame.delay as u64 * 10),
-            });
+            frames.push((raw, Duration::from_millis(frame.delay as u64 * 10)));
         }
 
-        self.frames = frames;
-        self.current_frame = 0;
-
-        if let Some(cur) = self.frames.get(self.current_frame) {
-            Ok(*cur)
+        if frames.is_empty() {
+            Err("Image contained no frames".to_owned())
         } else {
-            Err("Image contained not frames".to_owned())
+            Ok(frames)
         }
     }
 
-    fn load_static_image(&mut self, path: &Path) -> Result<FrameData, String> {
-        let (image, (w, h)) = load_image_from_file(self.display, path)?;
+    fn load_static_image(path: &Path) -> Result<Vec<(RawImage2d<u8>, Duration)>, String> {
+        let image = image::open(path).err_to_string()?;
+        let rgba = image.to_rgba();
+        let dimensions = rgba.dimensions();
+        let raw = RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions);
 
-        let frame = FrameData {
-            id: self.image_map.insert(image),
-            w,
-            h,
-            delay: Duration::default(),
-        };
-        self.current_frame = 0;
-        self.frames = vec![frame];
-
-        Ok(frame)
+        Ok(vec![(raw, Duration::default())])
     }
-
-    pub fn load_resource_image(&mut self, buffer: &[u8]) -> Result<Id, String> {
-        let image = image::load_from_memory(buffer).err_to_string()?;
-        let (texture, _) = texture_from_image(self.display, image)?;
-        Ok(self.image_map.insert(texture))
-    }
-}
-
-fn load_image_from_file(display: &Display, path: &Path) -> Result<(SrgbTexture2d, (u32, u32)), String> {
-    let image = image::open(path).err_to_string()?;
-    texture_from_image(display, image)
-}
-
-fn texture_from_image(display: &Display, image: image::DynamicImage) -> Result<(SrgbTexture2d, (u32, u32)), String> {
-    let rgba = image.to_rgba();
-    let dimensions = rgba.dimensions();
-    let raw = RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions);
-    SrgbTexture2d::new(display, raw)
-        .map(|t| (t, dimensions))
-        .err_to_string()
 }
