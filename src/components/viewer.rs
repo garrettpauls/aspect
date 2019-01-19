@@ -1,5 +1,6 @@
 use conrod_core::{widget, Widget, Sizeable, Positionable};
-use crate::components::ImageData;
+
+use crate::systems::{EventSystem, events as e};
 
 widget_ids!(struct Ids {
     image,
@@ -14,6 +15,12 @@ pub enum ImageScale {
     },
 }
 
+pub struct ImageData {
+    id: conrod_core::image::Id,
+    w: u32,
+    h: u32,
+}
+
 pub struct State {
     ids: Ids,
     image: Option<ImageData>,
@@ -21,21 +28,21 @@ pub struct State {
 }
 
 #[derive(WidgetCommon)]
-pub struct ImageViewer {
+pub struct ImageViewer<'a> {
     #[conrod(common_builder)] common: widget::CommonBuilder,
-    image: ImageData,
+    events: &'a EventSystem,
 }
 
-impl ImageViewer {
-    pub fn new(image: ImageData) -> Self {
+impl<'a> ImageViewer<'a> {
+    pub fn new(events: &'a EventSystem) -> Self {
         ImageViewer {
             common: widget::CommonBuilder::default(),
-            image,
+            events,
         }
     }
 }
 
-impl Widget for ImageViewer {
+impl<'a> Widget for ImageViewer<'a> {
     type State = State;
     type Style = ();
     type Event = ();
@@ -58,76 +65,71 @@ impl Widget for ImageViewer {
             ..
         } = args;
 
-        let image = if let Some(image) = &state.image {
-            if *image != self.image {
-                log::info!("Resetting image scale on new image");
-                state.update(|s| {
-                    s.image = Some(self.image.clone());
-                    s.scale = ImageScale::FitAll;
-                });
-                &self.image
-            } else if image.id != self.image.id {
-                log::trace!("Updating image id: {:?} -> {:?}", image.id, self.image.id);
-                state.update(|s| {
-                    s.image = Some(self.image.clone());
-                });
-                &self.image
-            } else {
-                image
-            }
-        } else {
-            log::info!("Resetting image scale on new image");
-            state.update(|s| {
-                s.image = Some(self.image.clone());
-                s.scale = ImageScale::FitAll;
-            });
-            &self.image
-        };
-
-        let [uw, uh] = ui.wh_of(id).unwrap_or(ui.window_dim());
-        let scaled = ScaledImage::new(&image, &state.scale, uw, uh);
-
-        widget::Image::new(image.id)
-            .parent(id).graphics_for(id)
-            .w_h(scaled.w, scaled.h)
-            .top_left_with_margins(scaled.top, scaled.left)
-            .set(state.ids.image, ui);
-
-
-        let input = ui.widget_input(id);
-        for drag in input.drags() {
-            use conrod_core::input::MouseButton;
-            if let Some(scale) = match (drag.button, &state.scale) {
-                (MouseButton::Left, ImageScale::Scale { scale, offset_top, offset_left }) => Some(ImageScale::Scale {
-                    scale: *scale,
-                    offset_top: offset_top - drag.delta_xy[1],
-                    offset_left: offset_left + drag.delta_xy[0],
-                }),
-                (MouseButton::Left, _) => Some(ImageScale::Scale {
-                    scale: scaled.scale,
-                    offset_top: scaled.top,
-                    offset_left: scaled.left,
-                }),
-                _ => None,
-            } {
-                state.update(|s| s.scale = scale);
+        for event in self.events.events() {
+            match event {
+                e::AppEvent::Image(event) => match event {
+                    e::Image::SwapImageId(id) => {
+                        log::info!("Swapping image id to {:?}", id);
+                        state.update(|s| if let Some(i) = s.image.as_mut() { i.id = *id });
+                    }
+                    e::Image::Loaded { id, w, h } => {
+                        log::info!("Loading new image: {:?}, {}x{}", id, w, h);
+                        state.update(|s| {
+                            s.image = Some(ImageData { id: *id, w: *w, h: *h });
+                            s.scale = ImageScale::FitAll;
+                        });
+                    }
+                },
+                _ => (),
             }
         }
 
-        for scroll in input.scrolls() {
-            let scale = match state.scale {
-                ImageScale::FitAll => ImageScale::Scale {
-                    scale: scaled.scale,
-                    offset_top: scaled.top,
-                    offset_left: scaled.left,
-                },
-                ImageScale::Scale { scale, offset_top, offset_left } => ImageScale::Scale {
-                    scale: adjust_scale(scale, &scroll),
-                    offset_top,
-                    offset_left,
-                },
-            };
-            state.update(|s| s.scale = scale);
+        if let Some(image) = &state.image {
+            let [uw, uh] = ui.wh_of(id).unwrap_or(ui.window_dim());
+            let scaled = ScaledImage::new(&image, &state.scale, uw, uh);
+
+            widget::Image::new(image.id)
+                .parent(id).graphics_for(id)
+                .w_h(scaled.w, scaled.h)
+                .top_left_with_margins(scaled.top, scaled.left)
+                .set(state.ids.image, ui);
+
+
+            let input = ui.widget_input(id);
+            for drag in input.drags() {
+                use conrod_core::input::MouseButton;
+                if let Some(scale) = match (drag.button, &state.scale) {
+                    (MouseButton::Left, ImageScale::Scale { scale, offset_top, offset_left }) => Some(ImageScale::Scale {
+                        scale: *scale,
+                        offset_top: offset_top - drag.delta_xy[1],
+                        offset_left: offset_left + drag.delta_xy[0],
+                    }),
+                    (MouseButton::Left, _) => Some(ImageScale::Scale {
+                        scale: scaled.scale,
+                        offset_top: scaled.top,
+                        offset_left: scaled.left,
+                    }),
+                    _ => None,
+                } {
+                    state.update(|s| s.scale = scale);
+                }
+            }
+
+            for scroll in input.scrolls() {
+                let scale = match state.scale {
+                    ImageScale::FitAll => ImageScale::Scale {
+                        scale: scaled.scale,
+                        offset_top: scaled.top,
+                        offset_left: scaled.left,
+                    },
+                    ImageScale::Scale { scale, offset_top, offset_left } => ImageScale::Scale {
+                        scale: adjust_scale(scale, &scroll),
+                        offset_top,
+                        offset_left,
+                    },
+                };
+                state.update(|s| s.scale = scale);
+            }
         }
     }
 }

@@ -1,8 +1,8 @@
 use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
 
-use crate::components::Action;
 use crate::data::{FileList, FILE_SORT_METHODS, Rating};
 use crate::res::Resources;
+use crate::systems::{EventSystem, AppEvent, events as e};
 
 mod list_item;
 mod rating;
@@ -29,14 +29,16 @@ pub struct ActionOverlay<'a> {
     #[conrod(common_builder)] common: widget::CommonBuilder,
     files: &'a FileList,
     res: &'a Resources,
+    events: &'a mut EventSystem,
 }
 
 impl<'a> ActionOverlay<'a> {
-    pub fn new(files: &'a FileList, res: &'a Resources) -> Self {
+    pub fn new(files: &'a FileList, res: &'a Resources, events: &'a mut EventSystem) -> Self {
         ActionOverlay {
             common: widget::CommonBuilder::default(),
             files,
             res,
+            events,
         }
     }
 }
@@ -44,7 +46,7 @@ impl<'a> ActionOverlay<'a> {
 impl<'a> Widget for ActionOverlay<'a> {
     type State = State;
     type Style = ();
-    type Event = Vec<Action>;
+    type Event = ();
 
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
         State {
@@ -64,8 +66,6 @@ impl<'a> Widget for ActionOverlay<'a> {
             rect,
             ..
         } = args;
-        let mut actions = Vec::new();
-
         const ACTION_HEIGHT: f64 = 48.0;
 
         widget::Rectangle::fill_with([300.0, rect.h()], ui.theme.shape_color)
@@ -81,7 +81,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             use conrod_core::widget::text_box::Event;
             match event {
                 Event::Update(str) => state.update(|s| s.filter_text = str),
-                Event::Enter => actions.push(Action::FilterByText(state.filter_text.clone()))
+                Event::Enter => self.events.push(e::Filter::Text(state.filter_text.clone()).into()),
             }
         }
 
@@ -92,7 +92,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             .down_from(state.ids.filter_text, 0.0)
             .set(state.ids.filter_rating, ui) {
             if state.filter_rating != filter_rating {
-                actions.push(Action::FilterByRating(filter_rating.clone()));
+                self.events.push(e::Filter::Rating(filter_rating.clone()).into());
                 state.update(|s| s.filter_rating = filter_rating);
             }
         }
@@ -119,7 +119,7 @@ impl<'a> Widget for ActionOverlay<'a> {
                         item.set(widget, ui);
                     }
                 }
-                Event::Selection(i) => actions.push(Action::Select(i)),
+                Event::Selection(i) => self.events.push(e::Nav::ImageIndex(i).into()),
                 _ => (),
             }
         }
@@ -134,7 +134,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             .w_h(48.0, ACTION_HEIGHT)
             .label(">>")
             .set(state.ids.next, ui) {
-            actions.push(Action::ImageNext);
+            self.events.push(e::Nav::ImageNext.into());
         }
 
         for _click in widget::Button::new()
@@ -144,7 +144,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             .wh_of(state.ids.next)
             .label("<<")
             .set(state.ids.prev, ui) {
-            actions.push(Action::ImagePrev);
+            self.events.push(e::Nav::ImagePrev.into());
         }
 
         let idx = FILE_SORT_METHODS.iter().position(|&x| x == *self.files.current_sort());
@@ -157,7 +157,7 @@ impl<'a> Widget for ActionOverlay<'a> {
             .set(state.ids.sort, ui) {
             if Some(new_idx) != idx {
                 if let Some(method) = FILE_SORT_METHODS.get(new_idx) {
-                    actions.push(Action::Sort(*method));
+                    self.events.push(AppEvent::Sort(*method));
                 }
             }
         }
@@ -169,10 +169,8 @@ impl<'a> Widget for ActionOverlay<'a> {
             .down_from(state.ids.sort, 0.0)
             .w_of(state.ids.sort).h(48.0)
             .set(state.ids.rating, ui) {
-            actions.push(Action::SetRating(rating));
+            self.events.push(e::SetMeta::Rating(rating).into());
         }
-
-        actions
     }
 }
 

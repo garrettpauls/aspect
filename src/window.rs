@@ -3,8 +3,9 @@ use glium::Surface;
 
 use ttf_noto_sans;
 
-use crate::components::{Action, App, ImageManager};
-use crate::support::{EventLoop, GliumDisplayWinitWrapper};
+use crate::components::App;
+use crate::support::{EventLoop, GliumDisplayWinitWrapper, LogError};
+use crate::systems;
 use crate::res::Resources;
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
@@ -15,6 +16,8 @@ widget_ids!(struct Ids {
 });
 
 pub fn run() {
+    let mut event_system = systems::EventSystem::new();
+
     let mut events_loop = glium::glutin::EventsLoop::new();
     let window = glium::glutin::WindowBuilder::new()
         .with_title("Aspect")
@@ -30,15 +33,17 @@ pub fn run() {
     ui.theme = super::theme::default_theme();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
-    let mut image_manager = ImageManager::new(&display.0);
+    let mut image_system = systems::ImageSystem::new(&display.0);
 
-    let resources = Resources::load(&mut image_manager).unwrap();
+    let resources = Resources::load(&mut image_system).unwrap();
 
     let ids = Ids::new(ui.widget_id_generator());
 
     let mut event_loop = EventLoop::new();
     'main: loop {
-        for event in event_loop.next(&mut events_loop, image_manager.time_to_next_update()) {
+        event_system.update();
+
+        for event in event_loop.next(&mut events_loop, image_system.time_to_next_update()) {
             if let Some(event) = conrod_winit::convert_event(event.clone(), &display) {
                 ui.handle_event(event);
                 event_loop.needs_update();
@@ -53,25 +58,20 @@ pub fn run() {
             }
         }
 
-        image_manager.update();
+        image_system.update(&mut event_system).log_err();
 
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            for action in App::new(image_manager.current().cloned(), &resources)
+            App::new(&mut event_system, &resources)
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()
-                .set(ids.app, ui) {
-                match action {
-                    Action::LoadImage(path) => if let Err(e) = image_manager.load_image(&path) { log::error!("Failed to load image {}: {}", path.display(), e) },
-                    _ => ()
-                }
-            }
+                .set(ids.app, ui);
         }
 
         if let Some(primitives) = ui.draw_if_changed() {
-            let image_map = image_manager.get_map();
+            let image_map = image_system.get_map();
             renderer.fill(&display.0, primitives, image_map);
             let mut target = display.0.draw();
             target.clear_color(0.0, 0.0, 0.0, 1.0);

@@ -17,6 +17,7 @@ mod components;
 mod data;
 mod res;
 mod support;
+mod systems;
 mod theme;
 mod window;
 
