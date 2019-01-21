@@ -8,6 +8,9 @@ pub struct Rating(usize);
 
 impl Rating {
     pub fn as_i64(&self) -> i64 { self.0 as i64 }
+
+    pub fn max_value() -> usize { 5 }
+    pub fn min_value() -> usize { 1 }
 }
 
 impl From<usize> for Rating {
@@ -16,7 +19,9 @@ impl From<usize> for Rating {
 
 impl From<i64> for Rating {
     fn from(rating: i64) -> Self {
-        Rating(rating.max(1).min(5) as usize)
+        Rating(rating
+            .max(Rating::min_value() as i64)
+            .min(Rating::max_value() as i64) as usize)
     }
 }
 
@@ -34,6 +39,20 @@ impl Into<usize> for Rating {
 
 impl Into<i64> for Rating {
     fn into(self) -> i64 { self.0 as i64 }
+}
+
+impl fmt::Display for Rating {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let r = self.0;
+        for v in Rating::min_value()..=Rating::max_value() {
+            // unicode characters don't display correctly in Windows title bars
+            // might be a glium/winit problem, needs more research.
+            // f.write_str(if v <= r { "★" } else { "☆" })?;
+            f.write_str(if v <= r { "*" } else { "_" })?;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +86,13 @@ impl File {
         self.path.metadata()
             .map(|m| m.modified().unwrap_or(SystemTime::UNIX_EPOCH))
             .unwrap_or(SystemTime::UNIX_EPOCH)
+    }
+}
+
+impl fmt::Display for File {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let r = if let Some(r) = &self.rating { r } else { &Rating(0) };
+        write!(f, "{} {}", r, self.name())
     }
 }
 

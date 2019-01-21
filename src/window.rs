@@ -64,6 +64,7 @@ pub fn run() {
             }
         }
 
+        display.update(&event_system);
         image_system.update(&mut event_system).log_err();
         if let Some(files) = &mut file_list {
             files.update(&mut event_system);

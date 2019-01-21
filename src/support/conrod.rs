@@ -5,6 +5,7 @@ extern crate conrod_winit;
 use std;
 use std::time::{Duration, Instant};
 use glium;
+use crate::systems::{EventSystem, events as e};
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 
@@ -14,6 +15,21 @@ impl conrod_winit::WinitWindow for GliumDisplayWinitWrapper {
     }
     fn hidpi_factor(&self) -> f32 {
         self.0.gl_window().get_hidpi_factor() as _
+    }
+}
+
+impl GliumDisplayWinitWrapper {
+    pub fn update(&self, events: &EventSystem) {
+        for event in events.events() {
+            match event {
+                e::AppEvent::Load(file) => {
+                    let title = format!("{}", file);
+                    log::info!("Set window title: {}", title);
+                    self.0.gl_window().set_title(&title);
+                }
+                _ => (),
+            }
+        }
     }
 }
 
