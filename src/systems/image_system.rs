@@ -51,7 +51,7 @@ impl<'a> ImageSystem<'a> {
     pub fn update(&mut self, events: &mut EventSystem) -> Result<(), String> {
         let new_events: Vec<_> = events.events()
             .filter_map(|event| match event {
-                AppEvent::Load(file) => self.load_file(&file),
+                AppEvent::Load(file) => self.load_file(&file.path),
                 _ => None,
             }).collect();
         for event in new_events {

@@ -5,7 +5,7 @@ use ttf_noto_sans;
 
 use crate::components::App;
 use crate::support::{EventLoop, GliumDisplayWinitWrapper, LogError};
-use crate::systems;
+use crate::systems::{self, events as e};
 use crate::res::Resources;
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
@@ -34,6 +34,12 @@ pub fn run() {
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
     let mut image_system = systems::ImageSystem::new(&display.0);
+    let mut file_list = crate::data::FileList::from_environment();
+    if let Some(file_list) = &file_list {
+        if let Some(file) = file_list.current() {
+            event_system.push(e::AppEvent::Load(file.clone()));
+        }
+    }
 
     let resources = Resources::load(&mut image_system).unwrap();
 
@@ -59,11 +65,14 @@ pub fn run() {
         }
 
         image_system.update(&mut event_system).log_err();
+        if let Some(files) = &mut file_list {
+            files.update(&mut event_system);
+        }
 
         {
             use conrod_core::{Positionable, Sizeable};
             let ui = &mut ui.set_widgets();
-            App::new(&mut event_system, &resources)
+            App::new(&mut event_system, &resources, &file_list)
                 .parent(ui.window)
                 .wh_of(ui.window)
                 .top_left()

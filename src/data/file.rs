@@ -22,7 +22,7 @@ impl From<i64> for Rating {
 
 impl From<i32> for Rating {
     fn from(rating: i32) -> Self {
-        Rating(rating.max(1).min(5) as usize)
+        Rating::from(rating as i64)
     }
 }
 

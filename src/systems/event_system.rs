@@ -20,6 +20,10 @@ impl EventSystem {
         self.pending.push(event);
     }
 
+    pub fn push_all(&mut self, mut events: Vec<AppEvent>) {
+        self.pending.append(&mut events);
+    }
+
     pub fn events(&self) -> Iter<AppEvent> { self.current.iter() }
 
     pub fn update(&mut self) {

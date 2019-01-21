@@ -1,11 +1,10 @@
-use std::path::PathBuf;
 use std::convert::Into;
-use crate::data::{FileSort, Rating};
+use crate::data::{File, FileSort, Rating};
 
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     Image(Image),
-    Load(PathBuf),
+    Load(File),
     Nav(Nav),
     Sort(FileSort),
     Filter(Filter),

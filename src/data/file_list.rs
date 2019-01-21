@@ -5,7 +5,8 @@ use std::ops::Drop;
 
 use super::{File, Filter, Rating};
 use super::persist::PersistenceManager;
-use crate::support::{ExtensionIs, LogError};
+use crate::support::{ExtensionIs, LogError, ToNone};
+use crate::systems::EventSystem;
 
 #[derive(Debug)]
 pub struct FileList {
@@ -133,15 +134,22 @@ impl FileList {
 
     pub fn len(&self) -> usize { self.files.len() }
 
-    pub fn set_current(&mut self, current: usize) {
-        self.current_index = if self.files.len() == 0 {
+    fn set_current(&mut self, current: usize) -> Option<&File> {
+        let i = if self.files.len() == 0 {
             0
         } else {
             current % self.files.len()
         };
+
+        if i != self.current_index {
+            self.current_index = i;
+            self.current()
+        } else {
+            None
+        }
     }
 
-    pub fn set_rating(&mut self, rating: Option<Rating>) {
+    fn set_rating(&mut self, rating: Option<Rating>) {
         if let Some(current) = self.current_mut() {
             current.rating = rating;
         }
@@ -152,26 +160,24 @@ impl FileList {
         }.log_err();
     }
 
-    pub fn next(&mut self) {
-        self.set_current(self.current_index + 1);
+    fn next(&mut self) -> Option<&File> {
+        self.set_current(self.current_index + 1)
     }
 
-    pub fn prev(&mut self) {
+    fn prev(&mut self) -> Option<&File> {
         let i = if self.current_index > 0 {
             self.current_index
         } else {
             self.len().min(1)
         } - 1;
-        self.set_current(i);
+        self.set_current(i)
     }
 
     pub fn get_file(&self, index: usize) -> Option<&File> {
         self.files.get(index)
     }
 
-    pub fn get_filter(&self) -> &Filter { &self.filter }
-
-    pub fn sort_by(&mut self, property: FileSort) {
+    fn sort_by(&mut self, property: FileSort) {
         if self.current_sort == property {
             log::info!("Sort files by {} skipped due to already sorted", property);
             return;
@@ -210,7 +216,7 @@ impl FileList {
         self.set_current(new_idx);
     }
 
-    pub fn apply_filter(&mut self, filter: Filter) {
+    fn apply_filter(&mut self, filter: Filter) {
         log::info!("Filtering files: {:?}", filter);
 
         let is_subset = filter.is_subset_of(&self.filter);
@@ -244,6 +250,40 @@ impl FileList {
         if !is_subset {
             self.apply_sort();
         }
+    }
+
+    pub fn update(&mut self, events: &mut EventSystem) {
+        use crate::systems::events::*;
+
+        let new_events = events.events()
+            .filter_map(|event| match event {
+                AppEvent::Nav(nav) => {
+                    match nav {
+                        Nav::ImagePrev => self.prev(),
+                        Nav::ImageNext => self.next(),
+                        Nav::ImageIndex(idx) => self.set_current(*idx),
+                    }.map(|file| AppEvent::Load(file.clone()))
+                }
+                AppEvent::Sort(srt) => self.sort_by(*srt).none(),
+                AppEvent::Filter(filter) => match filter {
+                    Filter::Text(text) => {
+                        let new = self.filter.clone().with_name(&text);
+                        self.apply_filter(new);
+                        None
+                    }
+                    Filter::Rating(rating) => {
+                        let new = self.filter.clone().with_rating(&rating);
+                        self.apply_filter(new);
+                        None
+                    }
+                },
+                AppEvent::SetMeta(meta) => match meta {
+                    SetMeta::Rating(rating) => self.set_rating(rating.clone()).none(),
+                },
+                _ => None,
+            }).collect();
+
+        events.push_all(new_events);
     }
 }
 

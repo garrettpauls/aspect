@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     pub fn is_subset_of_by_rating() {
-        let current = Filter::default().with_rating(&Some(Rating::from(3)));
+        let current = Filter::default().with_rating(&Some(Rating::from(3i64)));
         test_is_subset_of(&Filter::default().with_rating(&None), &current, false);
         test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(1))), &current, false);
         test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(2))), &current, false);

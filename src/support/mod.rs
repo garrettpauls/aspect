@@ -32,3 +32,9 @@ impl<T, E> LogError<T> for Result<T, E>
         }
     }
 }
+
+pub trait ToNone {
+    fn none<O>(&self) -> Option<O> { None }
+}
+
+impl ToNone for () {}
