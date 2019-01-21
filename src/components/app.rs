@@ -66,8 +66,8 @@ impl<'a> Widget for App<'a> {
         for event in self.events.events() {
             match event {
                 AppEvent::Nav(nav) => match nav {
-                    e::Nav::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(1) }),
-                    e::Nav::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.increment_current(-1) }),
+                    e::Nav::ImageNext => state.update(|s| if let Some(f) = &mut s.files { f.next() }),
+                    e::Nav::ImagePrev => state.update(|s| if let Some(f) = &mut s.files { f.prev() }),
                     e::Nav::ImageIndex(i) => state.update(|s| if let Some(f) = &mut s.files { f.set_current(*i) }),
                 },
                 AppEvent::Sort(srt) => state.update(|s| if let Some(f) = &mut s.files { f.sort_by(*srt) }),

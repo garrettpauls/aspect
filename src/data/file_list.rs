@@ -134,7 +134,11 @@ impl FileList {
     pub fn len(&self) -> usize { self.files.len() }
 
     pub fn set_current(&mut self, current: usize) {
-        self.current_index = current % self.files.len();
+        self.current_index = if self.files.len() == 0 {
+            0
+        } else {
+            current % self.files.len()
+        };
     }
 
     pub fn set_rating(&mut self, rating: Option<Rating>) {
@@ -148,10 +152,17 @@ impl FileList {
         }.log_err();
     }
 
-    pub fn increment_current(&mut self, amount: i64) {
-        let i = (self.current_index as i64 + amount) % self.files.len() as i64;
-        let i = if i < 0 { self.files.len() as i64 + i } else { i } as usize;
-        self.current_index = i;
+    pub fn next(&mut self) {
+        self.set_current(self.current_index + 1);
+    }
+
+    pub fn prev(&mut self) {
+        let i = if self.current_index > 0 {
+            self.current_index
+        } else {
+            self.len().min(1)
+        } - 1;
+        self.set_current(i);
     }
 
     pub fn get_file(&self, index: usize) -> Option<&File> {
