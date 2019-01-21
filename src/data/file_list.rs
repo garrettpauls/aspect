@@ -168,7 +168,7 @@ impl FileList {
         let i = if self.current_index > 0 {
             self.current_index
         } else {
-            self.len().min(1)
+            self.len().max(1)
         } - 1;
         self.set_current(i)
     }
