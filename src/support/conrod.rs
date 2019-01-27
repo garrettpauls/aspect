@@ -22,7 +22,7 @@ impl GliumDisplayWinitWrapper {
     pub fn update(&self, events: &EventSystem) {
         for event in events.events() {
             match event {
-                e::AppEvent::Load(file) => {
+                e::AppEvent::Image(e::Image::Loaded { file, .. }) => {
                     let title = format!("{}", file);
                     log::info!("Set window title: {}", title);
                     self.0.gl_window().set_title(&title);

@@ -18,6 +18,7 @@ pub enum Image {
         id: conrod_core::image::Id,
         w: u32,
         h: u32,
+        file: File,
     },
     SwapImageId(conrod_core::image::Id),
 }

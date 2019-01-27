@@ -5,6 +5,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use super::{events as e, AppEvent, EventSystem};
+use crate::data::File;
 use crate::support::{ErrToString, ExtensionIs};
 
 #[derive(Debug, Copy, Clone)]
@@ -58,7 +59,7 @@ impl<'a> ImageSystem<'a> {
         let new_events: Vec<_> = events
             .events()
             .filter_map(|event| match event {
-                AppEvent::Load(file) => self.load_file(&file.path),
+                AppEvent::Load(file) => self.load_file(&file),
                 _ => None,
             })
             .collect();
@@ -101,7 +102,8 @@ impl<'a> ImageSystem<'a> {
         self.current_frame = 0;
     }
 
-    fn load_file(&mut self, path: &Path) -> Option<AppEvent> {
+    fn load_file(&mut self, file: &File) -> Option<AppEvent> {
+        let path = &file.path;
         log::info!("Loading image from path: {}", path.display());
         self.unload_image();
 
@@ -126,6 +128,7 @@ impl<'a> ImageSystem<'a> {
                     id: frame.id,
                     w: frame.w,
                     h: frame.h,
+                    file: file.clone(),
                 }
                 .into(),
             )

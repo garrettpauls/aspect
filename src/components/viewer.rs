@@ -72,7 +72,7 @@ impl<'a> Widget for ImageViewer<'a> {
                             }
                         });
                     }
-                    e::Image::Loaded { id, w, h } => {
+                    e::Image::Loaded { id, w, h, .. } => {
                         log::info!("Loading new image: {:?}, {}x{}", id, w, h);
                         state.update(|s| {
                             s.image = Some(ImageData {
