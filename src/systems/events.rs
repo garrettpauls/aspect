@@ -1,5 +1,5 @@
-use std::convert::Into;
 use crate::data::{File, FileSort, Rating};
+use std::convert::Into;
 
 #[derive(Debug, Clone)]
 pub enum AppEvent {
@@ -9,6 +9,7 @@ pub enum AppEvent {
     Sort(FileSort),
     Filter(Filter),
     SetMeta(SetMeta),
+    Slideshow(Slideshow),
 }
 
 #[derive(Debug, Clone)]
@@ -22,7 +23,9 @@ pub enum Image {
 }
 
 impl Into<AppEvent> for Image {
-    fn into(self) -> AppEvent { AppEvent::Image(self) }
+    fn into(self) -> AppEvent {
+        AppEvent::Image(self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +36,9 @@ pub enum Nav {
 }
 
 impl Into<AppEvent> for Nav {
-    fn into(self) -> AppEvent { AppEvent::Nav(self) }
+    fn into(self) -> AppEvent {
+        AppEvent::Nav(self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +48,9 @@ pub enum Filter {
 }
 
 impl Into<AppEvent> for Filter {
-    fn into(self) -> AppEvent { AppEvent::Filter(self) }
+    fn into(self) -> AppEvent {
+        AppEvent::Filter(self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -52,5 +59,19 @@ pub enum SetMeta {
 }
 
 impl Into<AppEvent> for SetMeta {
-    fn into(self) -> AppEvent { AppEvent::SetMeta(self) }
+    fn into(self) -> AppEvent {
+        AppEvent::SetMeta(self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Slideshow {
+    Start(std::time::Duration),
+    Stop,
+}
+
+impl Into<AppEvent> for Slideshow {
+    fn into(self) -> AppEvent {
+        AppEvent::Slideshow(self)
+    }
 }

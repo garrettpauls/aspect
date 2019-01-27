@@ -1,10 +1,11 @@
 use std::convert::AsRef;
-use std::path::{Path, PathBuf};
 use std::fmt;
 use std::ops::Drop;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
-use super::{File, Filter, Rating};
 use super::persist::PersistenceManager;
+use super::{File, Filter, Rating};
 use crate::support::{ExtensionIs, LogError, ToNone};
 use crate::systems::EventSystem;
 
@@ -16,6 +17,8 @@ pub struct FileList {
     filter: Filter,
     filtered_files: Vec<File>,
     persist: Option<PersistenceManager>,
+    slideshow: Option<Duration>,
+    slideshow_last_update: Instant,
 }
 
 impl Drop for FileList {
@@ -36,7 +39,8 @@ pub enum FileSort {
     Random,
 }
 
-pub static FILE_SORT_METHODS: &[FileSort] = &[FileSort::Name, FileSort::LastModified, FileSort::Random];
+pub static FILE_SORT_METHODS: &[FileSort] =
+    &[FileSort::Name, FileSort::LastModified, FileSort::Random];
 
 impl fmt::Display for FileSort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -58,8 +62,14 @@ impl FileList {
     pub fn from_environment() -> Option<Self> {
         use std::env::args;
 
-        let paths: Vec<_> = args().map(|a| PathBuf::from(a)).filter(|p| p.exists()).collect();
-        let files = paths.iter().filter_map(|p| FileList::from_file(p)).next()
+        let paths: Vec<_> = args()
+            .map(|a| PathBuf::from(a))
+            .filter(|p| p.exists())
+            .collect();
+        let files = paths
+            .iter()
+            .filter_map(|p| FileList::from_file(p))
+            .next()
             .or(paths.iter().filter_map(|p| FileList::from_dir(p)).next());
 
         files
@@ -73,7 +83,11 @@ impl FileList {
         let dir = path.parent()?;
         let mut list = FileList::from_dir(dir)?;
 
-        let (i, _) = list.files.iter().enumerate().find(|(_, f)| f.path == path)?;
+        let (i, _) = list
+            .files
+            .iter()
+            .enumerate()
+            .find(|(_, f)| f.path == path)?;
         list.current_index = i;
 
         Some(list)
@@ -98,7 +112,12 @@ impl FileList {
         }
 
         let persist = PersistenceManager::open_dir(path)
-            .map_err(|e| log::error!("Could not initialize persistence manager, functionality is limited! {}", e))
+            .map_err(|e| {
+                log::error!(
+                    "Could not initialize persistence manager, functionality is limited! {}",
+                    e
+                )
+            })
             .ok();
         if let Some(persist) = &persist {
             persist.populate_files(&mut file_names).log_err();
@@ -115,6 +134,8 @@ impl FileList {
             filter: Filter::default(),
             filtered_files: Vec::new(),
             persist,
+            slideshow: None,
+            slideshow_last_update: Instant::now(),
         };
 
         list.apply_sort();
@@ -124,15 +145,25 @@ impl FileList {
 }
 
 impl FileList {
-    pub fn current(&self) -> Option<&File> { self.files.get(self.current_index) }
+    pub fn current(&self) -> Option<&File> {
+        self.files.get(self.current_index)
+    }
 
-    fn current_mut(&mut self) -> Option<&mut File> { self.files.get_mut(self.current_index) }
+    fn current_mut(&mut self) -> Option<&mut File> {
+        self.files.get_mut(self.current_index)
+    }
 
-    pub fn current_index(&self) -> usize { self.current_index }
+    pub fn current_index(&self) -> usize {
+        self.current_index
+    }
 
-    pub fn current_sort(&self) -> &FileSort { &self.current_sort }
+    pub fn current_sort(&self) -> &FileSort {
+        &self.current_sort
+    }
 
-    pub fn len(&self) -> usize { self.files.len() }
+    pub fn len(&self) -> usize {
+        self.files.len()
+    }
 
     fn set_current(&mut self, current: usize) -> Option<&File> {
         let i = if self.files.len() == 0 {
@@ -156,8 +187,9 @@ impl FileList {
 
         match (&self.current(), &self.persist) {
             (Some(current), Some(persist)) => persist.set_rating(current, &current.rating),
-            _ => Ok(())
-        }.log_err();
+            _ => Ok(()),
+        }
+        .log_err();
     }
 
     fn next(&mut self) -> Option<&File> {
@@ -190,21 +222,25 @@ impl FileList {
     fn apply_sort(&mut self) {
         log::info!("Sort files by {}", self.current_sort);
 
-        let selected = self
-            .get_file(self.current_index)
-            .map(|f| f.path.clone());
+        let selected = self.get_file(self.current_index).map(|f| f.path.clone());
 
         {
-            use rand::{thread_rng, seq::SliceRandom};
+            use rand::{seq::SliceRandom, thread_rng};
             match self.current_sort {
-                FileSort::Name => self.files.sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
-                FileSort::LastModified => self.files.sort_by(|a, b| a.last_modified().cmp(&b.last_modified())),
+                FileSort::Name => self
+                    .files
+                    .sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
+                FileSort::LastModified => self
+                    .files
+                    .sort_by(|a, b| a.last_modified().cmp(&b.last_modified())),
                 FileSort::Random => self.files.shuffle(&mut thread_rng()),
             }
         }
 
         let new_idx = if let Some(selected) = selected {
-            self.files.iter().enumerate()
+            self.files
+                .iter()
+                .enumerate()
                 .find(|(_, i)| i.path == selected)
                 .map(|(i, _)| i)
                 .unwrap_or(0)
@@ -252,18 +288,31 @@ impl FileList {
         }
     }
 
+    pub fn is_slideshow_enabled(&self) -> bool {
+        self.slideshow.is_some()
+    }
+
+    fn slideshow_start(&mut self, duration: Duration) {
+        self.slideshow = Some(duration);
+        self.slideshow_last_update = Instant::now();
+    }
+
+    fn slideshow_stop(&mut self) {
+        self.slideshow = None;
+    }
+
     pub fn update(&mut self, events: &mut EventSystem) {
         use crate::systems::events::*;
 
-        let new_events = events.events()
+        let new_events = events
+            .events()
             .filter_map(|event| match event {
-                AppEvent::Nav(nav) => {
-                    match nav {
-                        Nav::ImagePrev => self.prev(),
-                        Nav::ImageNext => self.next(),
-                        Nav::ImageIndex(idx) => self.set_current(*idx),
-                    }.map(|file| AppEvent::Load(file.clone()))
+                AppEvent::Nav(nav) => match nav {
+                    Nav::ImagePrev => self.prev(),
+                    Nav::ImageNext => self.next(),
+                    Nav::ImageIndex(idx) => self.set_current(*idx),
                 }
+                .map(|file| AppEvent::Load(file.clone())),
                 AppEvent::Sort(srt) => self.sort_by(*srt).none(),
                 AppEvent::Filter(filter) => match filter {
                     Filter::Text(text) => {
@@ -280,10 +329,25 @@ impl FileList {
                 AppEvent::SetMeta(meta) => match meta {
                     SetMeta::Rating(rating) => self.set_rating(rating.clone()).none(),
                 },
+                AppEvent::Slideshow(slideshow) => match slideshow {
+                    Slideshow::Start(duration) => self.slideshow_start(*duration),
+                    Slideshow::Stop => self.slideshow_stop(),
+                }
+                .none(),
                 _ => None,
-            }).collect();
+            })
+            .collect();
 
         events.push_all(new_events);
+
+        if let Some(dur) = self.slideshow {
+            let now = Instant::now();
+
+            if dur <= now.duration_since(self.slideshow_last_update) {
+                events.push(Nav::ImageNext.into());
+                self.slideshow_last_update = now;
+            }
+        }
     }
 }
 
@@ -294,7 +358,9 @@ fn is_image_file(path: &Path) -> bool {
         return false;
     }
 
-    SUPPORTED_FILE_EXTENSIONS.iter().any(|ext| path.extension_is(*ext))
+    SUPPORTED_FILE_EXTENSIONS
+        .iter()
+        .any(|ext| path.extension_is(*ext))
 }
 
 #[cfg(test)]
@@ -311,21 +377,43 @@ mod tests {
             AC3,
             r"C:\files\4bc.png",
             r"C:\files\5ac.png",
-        ].iter().map(|f| File { path: PathBuf::from(*f), rating: None }).collect();
+        ]
+        .iter()
+        .map(|f| File {
+            path: PathBuf::from(*f),
+            rating: None,
+        })
+        .collect();
         let mut list = FileList::from_files(files, None);
 
         list.set_current(2);
         list.apply_filter(Filter::default().with_name("a"));
         println!("{:#?}", list);
-        assert_eq!(list.current().unwrap().path.to_string_lossy(), AC3, "filter by 'a'");
+        assert_eq!(
+            list.current().unwrap().path.to_string_lossy(),
+            AC3,
+            "filter by 'a'"
+        );
 
         list.apply_filter(Filter::default().with_name("ac"));
-        assert_eq!(list.current().unwrap().path.to_string_lossy(), AC3, "filter by 'ac'");
+        assert_eq!(
+            list.current().unwrap().path.to_string_lossy(),
+            AC3,
+            "filter by 'ac'"
+        );
 
         list.apply_filter(Filter::default().with_name("a"));
-        assert_eq!(list.current().unwrap().path.to_string_lossy(), AC3, "filter by 'a' after 'ac'");
+        assert_eq!(
+            list.current().unwrap().path.to_string_lossy(),
+            AC3,
+            "filter by 'a' after 'ac'"
+        );
 
         list.apply_filter(Filter::default().with_name(""));
-        assert_eq!(list.current().unwrap().path.to_string_lossy(), AC3, "filter by '' after 'ac'");
+        assert_eq!(
+            list.current().unwrap().path.to_string_lossy(),
+            AC3,
+            "filter by '' after 'ac'"
+        );
     }
 }

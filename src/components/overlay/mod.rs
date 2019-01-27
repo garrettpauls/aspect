@@ -1,8 +1,9 @@
-use conrod_core::{color, widget, Widget, Sizeable, Positionable, Labelable};
+use conrod_core::{color, widget, Labelable, Positionable, Sizeable, Widget};
+use std::time::Duration;
 
-use crate::data::{FileList, FILE_SORT_METHODS, Rating};
+use crate::data::{FileList, Rating, FILE_SORT_METHODS};
 use crate::res::Resources;
-use crate::systems::{EventSystem, AppEvent, events as e};
+use crate::systems::{events as e, AppEvent, EventSystem};
 
 mod list_item;
 mod rating;
@@ -16,6 +17,7 @@ widget_ids!(struct Ids {
     filter_rating,
     rating,
     bg_list,
+    slideshow,
 });
 
 pub struct State {
@@ -26,7 +28,8 @@ pub struct State {
 
 #[derive(WidgetCommon)]
 pub struct ActionOverlay<'a> {
-    #[conrod(common_builder)] common: widget::CommonBuilder,
+    #[conrod(common_builder)]
+    common: widget::CommonBuilder,
     files: &'a FileList,
     res: &'a Resources,
     events: &'a mut EventSystem,
@@ -69,7 +72,8 @@ impl<'a> Widget for ActionOverlay<'a> {
         const ACTION_HEIGHT: f64 = 48.0;
 
         widget::Rectangle::fill_with([300.0, rect.h()], ui.theme.shape_color)
-            .parent(id).graphics_for(id)
+            .parent(id)
+            .graphics_for(id)
             .top_right()
             .set(state.ids.bg_list, ui);
 
@@ -77,11 +81,14 @@ impl<'a> Widget for ActionOverlay<'a> {
             .parent(id)
             .w_h(300.0, ACTION_HEIGHT)
             .top_right_of(state.ids.bg_list)
-            .set(state.ids.filter_text, ui) {
+            .set(state.ids.filter_text, ui)
+        {
             use conrod_core::widget::text_box::Event;
             match event {
                 Event::Update(str) => state.update(|s| s.filter_text = str),
-                Event::Enter => self.events.push(e::Filter::Text(state.filter_text.clone()).into()),
+                Event::Enter => self
+                    .events
+                    .push(e::Filter::Text(state.filter_text.clone()).into()),
             }
         }
 
@@ -90,23 +97,24 @@ impl<'a> Widget for ActionOverlay<'a> {
             .w_h(300.0, ACTION_HEIGHT)
             .align_left_of(state.ids.filter_text)
             .down_from(state.ids.filter_text, 0.0)
-            .set(state.ids.filter_rating, ui) {
+            .set(state.ids.filter_rating, ui)
+        {
             if state.filter_rating != filter_rating {
-                self.events.push(e::Filter::Rating(filter_rating.clone()).into());
+                self.events
+                    .push(e::Filter::Rating(filter_rating.clone()).into());
                 state.update(|s| s.filter_rating = filter_rating);
             }
         }
 
-        let (mut events, scrollbar) =
-            widget::ListSelect::single(self.files.len())
-                .parent(id)
-                .flow_down()
-                .item_size(50.0)
-                .scrollbar_next_to()
-                .w_of(state.ids.filter_text)
-                .h(ui.h_of(id).unwrap_or(ui.win_h) - ACTION_HEIGHT - ACTION_HEIGHT)
-                .down_from(state.ids.filter_rating, 0.0)
-                .set(state.ids.file_list, ui);
+        let (mut events, scrollbar) = widget::ListSelect::single(self.files.len())
+            .parent(id)
+            .flow_down()
+            .item_size(50.0)
+            .scrollbar_next_to()
+            .w_of(state.ids.filter_text)
+            .h(ui.h_of(id).unwrap_or(ui.win_h) - ACTION_HEIGHT - ACTION_HEIGHT)
+            .down_from(state.ids.filter_rating, 0.0)
+            .set(state.ids.file_list, ui);
         while let Some(event) = events.next(ui, |i| self.files.current_index() == i) {
             use conrod_core::widget::list_select::Event;
 
@@ -114,7 +122,11 @@ impl<'a> Widget for ActionOverlay<'a> {
                 Event::Item(item) => {
                     if let Some(file) = self.files.get_file(item.i) {
                         let is_selected = self.files.current_index() == item.i;
-                        let style = if is_selected { Some(build_selected_style()) } else { None };
+                        let style = if is_selected {
+                            Some(build_selected_style())
+                        } else {
+                            None
+                        };
                         let widget = list_item::ListItem::new(file).with_style(style);
                         item.set(widget, ui);
                     }
@@ -133,7 +145,8 @@ impl<'a> Widget for ActionOverlay<'a> {
             .align_top_of(state.ids.filter_text)
             .w_h(48.0, ACTION_HEIGHT)
             .label(">>")
-            .set(state.ids.next, ui) {
+            .set(state.ids.next, ui)
+        {
             self.events.push(e::Nav::ImageNext.into());
         }
 
@@ -143,18 +156,22 @@ impl<'a> Widget for ActionOverlay<'a> {
             .align_top_of(state.ids.next)
             .wh_of(state.ids.next)
             .label("<<")
-            .set(state.ids.prev, ui) {
+            .set(state.ids.prev, ui)
+        {
             self.events.push(e::Nav::ImagePrev.into());
         }
 
-        let idx = FILE_SORT_METHODS.iter().position(|&x| x == *self.files.current_sort());
+        let idx = FILE_SORT_METHODS
+            .iter()
+            .position(|&x| x == *self.files.current_sort());
         if let Some(new_idx) = widget::DropDownList::new(FILE_SORT_METHODS, idx)
             .parent(id)
             .left_from(state.ids.prev, 0.0)
             .align_top_of(state.ids.next)
             .h_of(state.ids.next)
             .w(192.0)
-            .set(state.ids.sort, ui) {
+            .set(state.ids.sort, ui)
+        {
             if Some(new_idx) != idx {
                 if let Some(method) = FILE_SORT_METHODS.get(new_idx) {
                     self.events.push(AppEvent::Sort(*method));
@@ -163,13 +180,38 @@ impl<'a> Widget for ActionOverlay<'a> {
         }
 
         let current = self.files.current();
-        if let Some(rating) = rating::StarRating::new(current.and_then(|f| f.rating.clone()), self.res)
-            .parent(id)
-            .align_left_of(state.ids.sort)
-            .down_from(state.ids.sort, 0.0)
-            .w_of(state.ids.sort).h(48.0)
-            .set(state.ids.rating, ui) {
+        if let Some(rating) =
+            rating::StarRating::new(current.and_then(|f| f.rating.clone()), self.res)
+                .parent(id)
+                .align_left_of(state.ids.sort)
+                .down_from(state.ids.sort, 0.0)
+                .w_of(state.ids.sort)
+                .h(48.0)
+                .set(state.ids.rating, ui)
+        {
             self.events.push(e::SetMeta::Rating(rating).into());
+        }
+
+        for enabled in widget::Toggle::new(self.files.is_slideshow_enabled())
+            .parent(id)
+            .left_from(state.ids.rating, 0.0)
+            .align_top_of(state.ids.sort)
+            .w_h(192.0, 48.0)
+            .label(if self.files.is_slideshow_enabled() {
+                "Slideshow Running"
+            } else {
+                "Start Slideshow"
+            })
+            .set(state.ids.slideshow, ui)
+        {
+            self.events.push(
+                if enabled {
+                    e::Slideshow::Start(Duration::from_secs(15))
+                } else {
+                    e::Slideshow::Stop
+                }
+                .into(),
+            );
         }
     }
 }
