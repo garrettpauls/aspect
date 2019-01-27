@@ -2,10 +2,10 @@
 
 extern crate conrod_winit;
 
+use crate::systems::{events as e, EventSystem};
+use glium;
 use std;
 use std::time::{Duration, Instant};
-use glium;
-use crate::systems::{EventSystem, events as e};
 
 pub struct GliumDisplayWinitWrapper(pub glium::Display);
 
@@ -53,7 +53,11 @@ impl EventLoop {
     }
 
     /// Produce an iterator yielding all available events.
-    pub fn next(&mut self, events_loop: &mut glium::glutin::EventsLoop, max_delay: Option<Duration>) -> Vec<glium::glutin::Event> {
+    pub fn next(
+        &mut self,
+        events_loop: &mut glium::glutin::EventsLoop,
+        max_delay: Option<Duration>,
+    ) -> Vec<glium::glutin::Event> {
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least 16ms
         // since the last yield.
         let last_update = self.last_update;

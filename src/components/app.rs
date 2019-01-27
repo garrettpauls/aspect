@@ -1,6 +1,6 @@
-use conrod_core::{widget, Widget, Sizeable, Colorable, Positionable};
 use conrod_core::event::Button;
 use conrod_core::input::{Key, MouseButton};
+use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 
 use super::{ActionOverlay, ImageViewer};
 use crate::data::FileList;
@@ -21,14 +21,19 @@ pub struct State {
 
 #[derive(WidgetCommon)]
 pub struct App<'a> {
-    #[conrod(common_builder)] common: widget::CommonBuilder,
+    #[conrod(common_builder)]
+    common: widget::CommonBuilder,
     res: &'a Resources,
     events: &'a mut EventSystem,
     files: &'a Option<FileList>,
 }
 
 impl<'a> App<'a> {
-    pub fn new(events: &'a mut EventSystem, res: &'a Resources, files: &'a Option<FileList>) -> Self {
+    pub fn new(
+        events: &'a mut EventSystem,
+        res: &'a Resources,
+        files: &'a Option<FileList>,
+    ) -> Self {
         App {
             common: widget::CommonBuilder::default(),
             res,
@@ -53,15 +58,11 @@ impl<'a> Widget for App<'a> {
     fn style(&self) -> Self::Style {}
 
     fn update(mut self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        let widget::UpdateArgs {
-            state,
-            ui,
-            id,
-            ..
-        } = args;
+        let widget::UpdateArgs { state, ui, id, .. } = args;
 
         widget::Canvas::new()
-            .parent(id).graphics_for(id)
+            .parent(id)
+            .graphics_for(id)
             .color(ui.theme.background_color)
             .wh_of(id)
             .set(state.ids.background, ui);
@@ -94,15 +95,28 @@ impl<'a> Widget for App<'a> {
 }
 
 impl<'a> App<'a> {
-    fn process_input(&mut self, ui: &mut conrod_core::UiCell, state: &mut widget::State<State>, id: widget::Id) {
+    fn process_input(
+        &mut self,
+        ui: &mut conrod_core::UiCell,
+        state: &mut widget::State<State>,
+        id: widget::Id,
+    ) {
         use crate::systems::events::Nav;
-        let releases = ui.widget_input(id).releases().chain(ui.widget_input(state.ids.viewer).releases());
+        let releases = ui
+            .widget_input(id)
+            .releases()
+            .chain(ui.widget_input(state.ids.viewer).releases());
         for release in releases {
             match release.button {
-                Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) =>
-                    state.update(|s| s.is_overlay_visible = !s.is_overlay_visible),
-                Button::Mouse(MouseButton::Button6, _) | Button::Keyboard(Key::Right) => self.events.push(Nav::ImageNext.into()),
-                Button::Mouse(MouseButton::X2, _) | Button::Keyboard(Key::Left) => self.events.push(Nav::ImagePrev.into()),
+                Button::Keyboard(Key::Space) | Button::Mouse(MouseButton::Middle, _) => {
+                    state.update(|s| s.is_overlay_visible = !s.is_overlay_visible)
+                }
+                Button::Mouse(MouseButton::Button6, _) | Button::Keyboard(Key::Right) => {
+                    self.events.push(Nav::ImageNext.into())
+                }
+                Button::Mouse(MouseButton::X2, _) | Button::Keyboard(Key::Left) => {
+                    self.events.push(Nav::ImagePrev.into())
+                }
                 _ => (),
             }
         }

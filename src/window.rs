@@ -4,9 +4,9 @@ use glium::Surface;
 use ttf_noto_sans;
 
 use crate::components::App;
+use crate::res::Resources;
 use crate::support::{EventLoop, GliumDisplayWinitWrapper, LogError};
 use crate::systems::{self, events as e};
-use crate::res::Resources;
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
 const INITIAL_WINDOW_HEIGHT: u32 = 500;
@@ -28,8 +28,15 @@ pub fn run() {
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     let display = GliumDisplayWinitWrapper(display);
 
-    let mut ui = conrod_core::UiBuilder::new([INITIAL_WINDOW_WIDTH as f64, INITIAL_WINDOW_HEIGHT as f64]).build();
-    ui.fonts.insert(conrod_core::text::FontCollection::from_bytes(ttf_noto_sans::REGULAR).unwrap().into_font().unwrap());
+    let mut ui =
+        conrod_core::UiBuilder::new([INITIAL_WINDOW_WIDTH as f64, INITIAL_WINDOW_HEIGHT as f64])
+            .build();
+    ui.fonts.insert(
+        conrod_core::text::FontCollection::from_bytes(ttf_noto_sans::REGULAR)
+            .unwrap()
+            .into_font()
+            .unwrap(),
+    );
     ui.theme = super::theme::default_theme();
 
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();

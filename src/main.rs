@@ -32,6 +32,6 @@ fn main() {
             // TODO: show error to user properly
             eprintln!("{:?}", e);
         }
-        _ => ()
+        _ => (),
     }
 }

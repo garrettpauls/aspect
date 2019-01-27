@@ -1,4 +1,4 @@
-use conrod_core::{widget, widget::Id, Widget, Sizeable, Positionable};
+use conrod_core::{widget, widget::Id, Positionable, Sizeable, Widget};
 
 use crate::data::Rating;
 use crate::res::Resources;
@@ -12,11 +12,16 @@ impl Ids {
     fn new(mut generator: widget::id::Generator) -> Self {
         Ids {
             background: generator.next(),
-            stars: [generator.next(), generator.next(), generator.next(), generator.next(), generator.next()],
+            stars: [
+                generator.next(),
+                generator.next(),
+                generator.next(),
+                generator.next(),
+                generator.next(),
+            ],
         }
     }
 }
-
 
 pub struct State {
     ids: Ids,
@@ -24,7 +29,8 @@ pub struct State {
 
 #[derive(WidgetCommon)]
 pub struct StarRating<'a> {
-    #[conrod(common_builder)] common: widget::CommonBuilder,
+    #[conrod(common_builder)]
+    common: widget::CommonBuilder,
     rating: Option<Rating>,
     res: &'a Resources,
 }
@@ -62,7 +68,8 @@ impl<'a> Widget for StarRating<'a> {
         } = args;
 
         widget::Rectangle::fill_with(rect.dim(), ui.theme.shape_color)
-            .parent(id).graphics_for(id)
+            .parent(id)
+            .graphics_for(id)
             .xy(rect.xy())
             .set(state.ids.background, ui);
 
@@ -74,7 +81,11 @@ impl<'a> Widget for StarRating<'a> {
 
         for i in 0..5 {
             let is_filled = i < rating;
-            let image = if is_filled { self.res.images.star_filled } else { self.res.images.star_outline };
+            let image = if is_filled {
+                self.res.images.star_filled
+            } else {
+                self.res.images.star_outline
+            };
             let b = widget::Button::image(image)
                 .parent(id)
                 .w_h(star_size, star_size)
@@ -89,7 +100,11 @@ impl<'a> Widget for StarRating<'a> {
 
             for _click in b.set(state.ids.stars[i], ui) {
                 let r = i + 1;
-                new_rating = Some(if r == rating { None } else { Some(Rating::from(r)) });
+                new_rating = Some(if r == rating {
+                    None
+                } else {
+                    Some(Rating::from(r))
+                });
                 log::info!("Rating clicked: {} -> {:?}", i, new_rating);
             }
         }

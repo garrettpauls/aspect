@@ -6,7 +6,9 @@ pub trait ExtensionIs {
 
 impl ExtensionIs for Path {
     fn extension_is(&self, ext: &str) -> bool {
-        self.extension().map(|e| e.to_string_lossy().to_lowercase() == ext.to_lowercase()).unwrap_or(false)
+        self.extension()
+            .map(|e| e.to_string_lossy().to_lowercase() == ext.to_lowercase())
+            .unwrap_or(false)
     }
 }
 

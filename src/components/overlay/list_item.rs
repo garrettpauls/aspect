@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use conrod_core::{widget, Widget, Sizeable, Positionable, Colorable};
+use conrod_core::{widget, Colorable, Positionable, Sizeable, Widget};
 use std::ffi::OsStr;
 
 use crate::data::File;
@@ -30,7 +30,8 @@ pub struct Style {
 
 #[derive(WidgetCommon)]
 pub struct ListItem<'a> {
-    #[conrod(common_builder)] common: widget::CommonBuilder,
+    #[conrod(common_builder)]
+    common: widget::CommonBuilder,
     style: Style,
     file: &'a File,
 }
@@ -59,11 +60,13 @@ impl<'a> Widget for ListItem<'a> {
 
     fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
         State {
-            ids: Ids::new(id_gen)
+            ids: Ids::new(id_gen),
         }
     }
 
-    fn style(&self) -> Self::Style { self.style.clone() }
+    fn style(&self) -> Self::Style {
+        self.style.clone()
+    }
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
         let widget::UpdateArgs {
@@ -75,7 +78,8 @@ impl<'a> Widget for ListItem<'a> {
         } = args;
 
         widget::Canvas::new()
-            .parent(id).graphics_for(id)
+            .parent(id)
+            .graphics_for(id)
             .wh_of(id)
             .top_left_of(id)
             .color(style.color(&ui.theme))
@@ -84,10 +88,17 @@ impl<'a> Widget for ListItem<'a> {
 
         // TODO: measure strings and layout correctly
         let h = self.get_h(ui).unwrap_or(50.0) / 2.5;
-        let name = self.file.path.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy();
+        let name = self
+            .file
+            .path
+            .file_name()
+            .unwrap_or_else(|| OsStr::new(""))
+            .to_string_lossy();
         widget::Text::new(&name)
-            .parent(id).graphics_for(id)
-            .w_of(id).h(h)
+            .parent(id)
+            .graphics_for(id)
+            .w_of(id)
+            .h(h)
             .top_left_of(state.ids.background)
             .left_justify()
             .no_line_wrap()
@@ -96,8 +107,10 @@ impl<'a> Widget for ListItem<'a> {
         let modified: DateTime<Local> = DateTime::from(self.file.last_modified());
         let modified = modified.format("    %F").to_string();
         widget::Text::new(&modified)
-            .parent(id).graphics_for(id)
-            .w_of(id).h(h)
+            .parent(id)
+            .graphics_for(id)
+            .w_of(id)
+            .h(h)
             .bottom_left_of(state.ids.background)
             .align_left_of(state.ids.name)
             .left_justify()
@@ -107,8 +120,10 @@ impl<'a> Widget for ListItem<'a> {
         let size = self.file.size();
         let size = format!("{}    ", size);
         widget::Text::new(&size)
-            .parent(id).graphics_for(id)
-            .w_of(id).h(h)
+            .parent(id)
+            .graphics_for(id)
+            .w_of(id)
+            .h(h)
             .align_left_of(state.ids.date)
             .align_top_of(state.ids.date)
             .right_justify()

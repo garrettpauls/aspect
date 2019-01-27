@@ -24,7 +24,9 @@ impl EventSystem {
         self.pending.append(&mut events);
     }
 
-    pub fn events(&self) -> Iter<AppEvent> { self.current.iter() }
+    pub fn events(&self) -> Iter<AppEvent> {
+        self.current.iter()
+    }
 
     pub fn update(&mut self) {
         use std::mem::replace;

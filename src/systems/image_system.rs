@@ -1,11 +1,11 @@
 use conrod_core::image::{Id, Map};
-use glium::Display;
 use glium::texture::{RawImage2d, SrgbTexture2d};
+use glium::Display;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use crate::support::{ExtensionIs, ErrToString};
-use super::{EventSystem, AppEvent, events as e};
+use super::{events as e, AppEvent, EventSystem};
+use crate::support::{ErrToString, ExtensionIs};
 
 #[derive(Debug, Copy, Clone)]
 struct FrameData {
@@ -34,26 +34,34 @@ impl<'a> ImageSystem<'a> {
         }
     }
 
-    pub fn get_map(&self) -> &Map<SrgbTexture2d> { &self.image_map }
+    pub fn get_map(&self) -> &Map<SrgbTexture2d> {
+        &self.image_map
+    }
 
     pub fn time_to_next_update(&self) -> Option<Duration> {
-        if self.frames.len() < 2 { return None; }
+        if self.frames.len() < 2 {
+            return None;
+        }
 
         let frame = &self.frames[self.current_frame];
         let now = Instant::now();
 
         let diff = now.duration_since(self.last_update);
 
-        frame.delay.checked_sub(diff)
+        frame
+            .delay
+            .checked_sub(diff)
             .or_else(|| Some(Duration::new(0, 0)))
     }
 
     pub fn update(&mut self, events: &mut EventSystem) -> Result<(), String> {
-        let new_events: Vec<_> = events.events()
+        let new_events: Vec<_> = events
+            .events()
             .filter_map(|event| match event {
                 AppEvent::Load(file) => self.load_file(&file.path),
                 _ => None,
-            }).collect();
+            })
+            .collect();
         for event in new_events {
             events.push(event);
         }
@@ -69,7 +77,12 @@ impl<'a> ImageSystem<'a> {
                 self.last_update = now;
                 let cur = &self.frames[self.current_frame];
                 events.push(e::Image::SwapImageId(cur.id).into());
-                log::trace!("update image frame: {}, {:?} <= {:?}", self.current_frame, frame.delay, diff);
+                log::trace!(
+                    "update image frame: {}, {:?} <= {:?}",
+                    self.current_frame,
+                    frame.delay,
+                    diff
+                );
             }
         }
 
@@ -93,7 +106,10 @@ impl<'a> ImageSystem<'a> {
         self.unload_image();
 
         if !path.exists() || !path.is_file() {
-            log::error!("Could not load image from path which is not a file: {}", path.display());
+            log::error!(
+                "Could not load image from path which is not a file: {}",
+                path.display()
+            );
             return None;
         }
 
@@ -105,11 +121,14 @@ impl<'a> ImageSystem<'a> {
 
         self.last_update = Instant::now();
         if let Ok(frame) = result {
-            Some(e::Image::Loaded {
-                id: frame.id,
-                w: frame.w,
-                h: frame.h,
-            }.into())
+            Some(
+                e::Image::Loaded {
+                    id: frame.id,
+                    w: frame.w,
+                    h: frame.h,
+                }
+                .into(),
+            )
         } else {
             None
         }
@@ -188,12 +207,18 @@ impl<'a> ImageSystem<'a> {
     }
 }
 
-fn load_image_from_file(display: &Display, path: &Path) -> Result<(SrgbTexture2d, (u32, u32)), String> {
+fn load_image_from_file(
+    display: &Display,
+    path: &Path,
+) -> Result<(SrgbTexture2d, (u32, u32)), String> {
     let image = image::open(path).err_to_string()?;
     texture_from_image(display, image)
 }
 
-fn texture_from_image(display: &Display, image: image::DynamicImage) -> Result<(SrgbTexture2d, (u32, u32)), String> {
+fn texture_from_image(
+    display: &Display,
+    image: image::DynamicImage,
+) -> Result<(SrgbTexture2d, (u32, u32)), String> {
     let rgba = image.to_rgba();
     let dimensions = rgba.dimensions();
     let raw = RawImage2d::from_raw_rgba_reversed(&rgba.into_raw(), dimensions);

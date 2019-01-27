@@ -12,7 +12,11 @@ pub struct Filter {
 // Builder methods
 impl Filter {
     pub fn with_name(mut self, name: &str) -> Self {
-        self.file_name = if name.is_empty() { None } else { Some(name.to_lowercase()) };
+        self.file_name = if name.is_empty() {
+            None
+        } else {
+            Some(name.to_lowercase())
+        };
         self
     }
 
@@ -31,7 +35,6 @@ impl Default for Filter {
     }
 }
 
-
 // Utility
 impl Filter {
     pub fn is_subset_of(&self, other: &Filter) -> bool {
@@ -39,7 +42,7 @@ impl Filter {
             (None, None) => true,
             (Some(_), None) => true,
             (None, Some(_)) => false,
-            (Some(new), Some(current)) => new.starts_with(current)
+            (Some(new), Some(current)) => new.starts_with(current),
         };
 
         let is_rating_subset = match (&self.rating, &other.rating) {
@@ -56,7 +59,10 @@ impl Filter {
         let name_matches = match (&self.file_name, file.path.file_name()) {
             (Some(_), None) => false,
             (None, _) => true,
-            (Some(filter), Some(name)) => name.to_str().map(|s| s.to_lowercase().contains(&*filter)).unwrap_or(false)
+            (Some(filter), Some(name)) => name
+                .to_str()
+                .map(|s| s.to_lowercase().contains(&*filter))
+                .unwrap_or(false),
         };
 
         let rating_matches = match (&self.rating, &file.rating) {
@@ -71,8 +77,8 @@ impl Filter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{File, Rating};
+    use super::*;
     use std::path::PathBuf;
 
     #[test]
@@ -90,18 +96,56 @@ mod tests {
     pub fn is_subset_of_by_rating() {
         let current = Filter::default().with_rating(&Some(Rating::from(3i64)));
         test_is_subset_of(&Filter::default().with_rating(&None), &current, false);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(1))), &current, false);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(2))), &current, false);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(3))), &current, true);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(4))), &current, true);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(5))), &current, true);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(1))), &Filter::default(), true);
-        test_is_subset_of(&Filter::default().with_rating(&Some(Rating::from(5))), &Filter::default(), true);
-        test_is_subset_of(&Filter::default().with_rating(&None), &Filter::default(), true);
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(1))),
+            &current,
+            false,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(2))),
+            &current,
+            false,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(3))),
+            &current,
+            true,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(4))),
+            &current,
+            true,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(5))),
+            &current,
+            true,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(1))),
+            &Filter::default(),
+            true,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&Some(Rating::from(5))),
+            &Filter::default(),
+            true,
+        );
+        test_is_subset_of(
+            &Filter::default().with_rating(&None),
+            &Filter::default(),
+            true,
+        );
     }
 
     fn test_is_subset_of(filter: &Filter, current: &Filter, expected: bool) {
-        assert_eq!(filter.is_subset_of(current), expected, "{:?} is subset of {:?}", filter, current);
+        assert_eq!(
+            filter.is_subset_of(current),
+            expected,
+            "{:?} is subset of {:?}",
+            filter,
+            current
+        );
     }
 
     #[test]
@@ -134,14 +178,40 @@ mod tests {
         };
 
         test_matches(&Filter::default(), &file, true);
-        test_matches(&Filter::default().with_rating(&Some(Rating::from(1))), &file, true);
-        test_matches(&Filter::default().with_rating(&Some(Rating::from(2))), &file, true);
-        test_matches(&Filter::default().with_rating(&Some(Rating::from(3))), &file, true);
-        test_matches(&Filter::default().with_rating(&Some(Rating::from(4))), &file, false);
-        test_matches(&Filter::default().with_rating(&Some(Rating::from(5))), &file, false);
+        test_matches(
+            &Filter::default().with_rating(&Some(Rating::from(1))),
+            &file,
+            true,
+        );
+        test_matches(
+            &Filter::default().with_rating(&Some(Rating::from(2))),
+            &file,
+            true,
+        );
+        test_matches(
+            &Filter::default().with_rating(&Some(Rating::from(3))),
+            &file,
+            true,
+        );
+        test_matches(
+            &Filter::default().with_rating(&Some(Rating::from(4))),
+            &file,
+            false,
+        );
+        test_matches(
+            &Filter::default().with_rating(&Some(Rating::from(5))),
+            &file,
+            false,
+        );
     }
 
     fn test_matches(filter: &Filter, file: &File, expected: bool) {
-        assert_eq!(filter.matches(file), expected, "{:?} matches {:?}", filter, file);
+        assert_eq!(
+            filter.matches(file),
+            expected,
+            "{:?} matches {:?}",
+            filter,
+            file
+        );
     }
 }

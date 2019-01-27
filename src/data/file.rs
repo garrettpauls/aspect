@@ -1,27 +1,37 @@
+use std::convert::{From, Into};
 use std::fmt;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use std::convert::{Into, From};
 
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Rating(usize);
 
 impl Rating {
-    pub fn as_i64(&self) -> i64 { self.0 as i64 }
+    pub fn as_i64(&self) -> i64 {
+        self.0 as i64
+    }
 
-    pub fn max_value() -> usize { 5 }
-    pub fn min_value() -> usize { 1 }
+    pub fn max_value() -> usize {
+        5
+    }
+    pub fn min_value() -> usize {
+        1
+    }
 }
 
 impl From<usize> for Rating {
-    fn from(rating: usize) -> Self { Rating::from(rating as i64) }
+    fn from(rating: usize) -> Self {
+        Rating::from(rating as i64)
+    }
 }
 
 impl From<i64> for Rating {
     fn from(rating: i64) -> Self {
-        Rating(rating
-            .max(Rating::min_value() as i64)
-            .min(Rating::max_value() as i64) as usize)
+        Rating(
+            rating
+                .max(Rating::min_value() as i64)
+                .min(Rating::max_value() as i64) as usize,
+        )
     }
 }
 
@@ -38,7 +48,9 @@ impl Into<usize> for Rating {
 }
 
 impl Into<i64> for Rating {
-    fn into(self) -> i64 { self.0 as i64 }
+    fn into(self) -> i64 {
+        self.0 as i64
+    }
 }
 
 impl fmt::Display for Rating {
@@ -74,7 +86,7 @@ impl File {
     pub fn name(&self) -> String {
         match self.path.file_name() {
             Some(s) => s.to_string_lossy().to_string(),
-            None => "".to_owned()
+            None => "".to_owned(),
         }
     }
 
@@ -83,7 +95,8 @@ impl File {
     }
 
     pub fn last_modified(&self) -> SystemTime {
-        self.path.metadata()
+        self.path
+            .metadata()
             .map(|m| m.modified().unwrap_or(SystemTime::UNIX_EPOCH))
             .unwrap_or(SystemTime::UNIX_EPOCH)
     }
@@ -91,7 +104,11 @@ impl File {
 
 impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let r = if let Some(r) = &self.rating { r } else { &Rating(0) };
+        let r = if let Some(r) = &self.rating {
+            r
+        } else {
+            &Rating(0)
+        };
         write!(f, "{} {}", r, self.name())
     }
 }
@@ -156,6 +173,9 @@ mod tests {
         assert_eq!(FileSize(2048).reduce(), FileSizeUnit::KiloByte(2.0));
         assert_eq!(FileSize(1048576).reduce(), FileSizeUnit::MegaByte(1.0));
         assert_eq!(FileSize(1073741824).reduce(), FileSizeUnit::GigaByte(1.0));
-        assert_eq!(FileSize(1099511627776).reduce(), FileSizeUnit::GigaByte(1024.0));
+        assert_eq!(
+            FileSize(1099511627776).reduce(),
+            FileSizeUnit::GigaByte(1024.0)
+        );
     }
 }
